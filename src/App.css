@@ -561,7 +561,8 @@ body {
 }
 
 html, body {
-  height: 100%;
+  height: 100vh;
+  height: 100dvh; /* Dynamic viewport height for mobile */
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -571,39 +572,16 @@ html, body {
 }
 
 #root {
-  height: 100%;
+  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 
-/* Disable iOS bounce scroll */
-body {
-  position: fixed;
-  width: 100%;
-  height: 100%;
-  overscroll-behavior: none;
-}
-
-/* Disable text selection on mobile */
-.chat-container * {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-}
-
-/* Allow text selection in input and messages */
-.chat-input,
-.message-content {
-  -webkit-user-select: text;
-  -moz-user-select: text;
-  -ms-user-select: text;
-  user-select: text;
-}
-
-/* Modern WhatsApp/Snapchat-tyylinen chat - Mobile First */
+/* Mobile keyboard handling */
 .chat-container {
   width: 100vw;
   height: 100vh;
+  height: 100dvh; /* Dynamic viewport height */
   background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%);
   display: flex;
   flex-direction: column;
@@ -825,6 +803,7 @@ body {
   backdrop-filter: blur(10px);
   position: relative;
   z-index: 10;
+  flex-shrink: 0; /* Estää kutistumisen näppäimistön kanssa */
 }
 
 .chat-input-form {
@@ -924,9 +903,15 @@ body {
 
 /* Mobile-specific improvements */
 @media (max-width: 768px) {
+  /* Safe area handling for mobile */
+  .chat-container {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
   .chat-header {
     padding: 1rem;
     min-height: 65px;
+    padding-top: max(1rem, env(safe-area-inset-top));
   }
   
   .chat-avatar {
@@ -960,6 +945,7 @@ body {
   
   .chat-input-container {
     padding: 1rem;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
   
   .chat-input {

@@ -42,6 +42,26 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Mobile keyboard handling
+  useEffect(() => {
+    const handleResize = () => {
+      // Scroll to bottom when keyboard opens/closes
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Focus handling for mobile
+  const handleInputFocus = () => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 300);
+  };
+
   // Lähetä viesti
   const sendMessage = async (e) => {
     e.preventDefault();
@@ -177,10 +197,11 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
+            onFocus={handleInputFocus}
             placeholder="Kirjoita viesti..."
             className="chat-input"
             maxLength={500}
-            autoFocus
+            autoComplete="off"
           />
           <button 
             type="submit" 
