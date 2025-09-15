@@ -1,34 +1,64 @@
+// Firebase Configuration - ChatNest
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import { 
+  getFirestore, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  collection, 
+  query, 
+  where, 
+  orderBy, 
+  addDoc, 
+  onSnapshot, 
+  updateDoc, 
+  deleteDoc, 
+  serverTimestamp 
+} from 'firebase/firestore';
 
-// Firebase-konfiguraatio - korvaa omilla arvoillasi Firebase Console:sta
-// 1. Mene https://console.firebase.google.com
-// 2. Luo uusi projekti tai valitse olemassa oleva
-// 3. Ota käyttöön Authentication (Google Sign-In)
-// 4. Ota käyttöön Firestore Database (aloita test mode)
-// 5. Projektiasetukset -> Yleiset -> Web-sovellukset -> Kopioi config-arvot tähän:
-
+// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "your-api-key-here",
-  authDomain: "your-project.firebaseapp.com", 
-  projectId: "your-project-id",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "your-app-id"
+  apiKey: "AIzaSyDHm9eBJPOcJJ0uC3InlUDnFmwNensq2bI",
+  authDomain: "chat-d8df8.firebaseapp.com",
+  projectId: "chat-d8df8",
+  storageBucket: "chat-d8df8.firebasestorage.app",
+  messagingSenderId: "1080868878464",
+  appId: "1:1080868878464:web:5c79175f7265e5abbece65",
+  measurementId: "G-Z7Y17XSPMG"
 };
 
-// HUOM! Älä unohda vaihtaa yllä olevia placeholder-arvoja oikeisiin arvoihin!
-
-// Alusta Firebase
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Exportit
+// Initialize Firebase Authentication and get a reference to the service
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+
+// Initialize Cloud Firestore and get a reference to the service
 export const db = getFirestore(app);
 
-// Google Provider asetukset
+// Configure Google Auth Provider
 googleProvider.setCustomParameters({
   prompt: 'select_account',
 });
+
+// Export Firebase functions
+export {
+  signInWithPopup,
+  signOut,
+  doc,
+  setDoc,
+  getDoc,
+  collection,
+  query,
+  where,
+  orderBy,
+  addDoc,
+  onSnapshot,
+  updateDoc,
+  deleteDoc,
+  serverTimestamp
+};
+
+console.log('🔥 Firebase initialisoitu onnistuneesti! ChatNest on valmis käyttöön.');
