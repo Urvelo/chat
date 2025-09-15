@@ -13,6 +13,34 @@ let mockData = {
   reports: {}
 };
 
+// Luo simuloituja käyttäjiä testikäyttöön
+const createMockUsers = () => {
+  const mockUsers = [
+    { name: 'Anna', age: 22 },
+    { name: 'Mikael', age: 19 },
+    { name: 'Sofia', age: 25 },
+    { name: 'Jukka', age: 31 },
+    { name: 'Emma', age: 20 },
+    { name: 'Ville', age: 28 }
+  ];
+
+  mockUsers.forEach((user, index) => {
+    const uid = `mock-user-${index + 1}`;
+    mockData.profiles[uid] = {
+      uid: uid,
+      displayName: user.name,
+      age: user.age,
+      email: `${user.name.toLowerCase()}@mock.local`,
+      deviceFingerprint: `mock-device-${index}`,
+      termsAccepted: true,
+      createdAt: new Date(Date.now() - Math.random() * 86400000), // Viime 24h sisään
+      lastActive: new Date(Date.now() - Math.random() * 3600000)  // Viime tunnin sisään
+    };
+  });
+
+  console.log('🤖 Luotu simuloituja käyttäjiä:', Object.keys(mockData.profiles).length);
+};
+
 // Lataa data localStorage:sta
 const loadMockData = () => {
   const saved = localStorage.getItem('chatnest-mock-data');
@@ -23,6 +51,26 @@ const loadMockData = () => {
       console.log('Alustetaan uusi mock data');
     }
   }
+  
+  // Luo simuloituja käyttäjiä jos ei ole
+  if (Object.keys(mockData.profiles).length === 0) {
+    createMockUsers();
+  }
+  
+  // Lisää satunnaisia käyttäjiä odottamaan
+  setTimeout(() => {
+    const profileIds = Object.keys(mockData.profiles);
+    const randomUsers = profileIds.slice(0, 2 + Math.floor(Math.random() * 3));
+    
+    mockData.waitingUsers = randomUsers.map(uid => ({
+      uid: uid,
+      profile: mockData.profiles[uid],
+      joinedAt: new Date(Date.now() - Math.random() * 600000) // Viime 10 min sisään
+    }));
+    
+    saveMockData();
+    console.log('👥 Simuloituja käyttäjiä odottamassa:', mockData.waitingUsers.length);
+  }, 2000);
 };
 
 // Tallenna data localStorage:een
@@ -155,6 +203,38 @@ export const onSnapshot = (query, callback) => {
     const collectionName = query.collection?.name || 'unknown';
     const collectionData = mockData[collectionName] || {};
     
+    // Erikoiskäsittely waitingUsers:lle - simuloi aktiivisia käyttäjiä
+    if (collectionName === 'waitingUsers') {
+      // Lisää satunnainen määrä simuloituja käyttäjiä
+      const currentTime = Date.now();
+      const simulatedUsers = [];
+      
+      // 30% todennäköisyys että löytyy käyttäjä
+      if (Math.random() < 0.3) {
+        const profileIds = Object.keys(mockData.profiles);
+        const randomProfile = mockData.profiles[profileIds[Math.floor(Math.random() * profileIds.length)]];
+        
+        if (randomProfile) {
+          simulatedUsers.push({
+            id: `waiting-${randomProfile.uid}`,
+            data: () => ({
+              uid: randomProfile.uid,
+              profile: randomProfile,
+              joinedAt: new Date(currentTime - Math.random() * 300000) // Viime 5 min sisään
+            })
+          });
+        }
+      }
+      
+      callback({ 
+        docs: simulatedUsers, 
+        empty: simulatedUsers.length === 0,
+        size: simulatedUsers.length 
+      });
+      return;
+    }
+    
+    // Tavallinen data käsittely
     const docs = Object.values(collectionData).map(data => ({
       id: data.id || 'unknown',
       data: () => data,
