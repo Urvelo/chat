@@ -167,7 +167,7 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
             setStatus('Löytyi match! Luodaan chat...');
             unsubscribe(); // Lopeta kuuntelu
             
-            await createChatRoom(user, otherUser);
+            await createChatRoom(otherUser);
           }
         }
       }, (error) => {
