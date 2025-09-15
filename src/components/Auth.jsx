@@ -43,10 +43,10 @@ const Auth = ({ user, setUser }) => {
       
       console.log("✅ Käyttäjä tallennettu, asetetaan tilaan");
       
-      // Aseta käyttäjä
+      // Aseta käyttäjä - tämä laukaisee siirtymän App.jsx:ssä
       setUser(newUser);
       
-      console.log("🎉 Kirjautuminen valmis!");
+      console.log("🎉 Kirjautuminen valmis, odotetaan siirtymää...");
     } catch (error) {
       console.error('❌ Sisäänkirjautumisvirhe:', error);
       setError('Jotain meni pieleen. Yritä uudelleen.');

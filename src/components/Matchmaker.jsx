@@ -53,14 +53,14 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
         
         const deletePromises = [];
         
-        snapshot.docs.forEach(doc => {
-          const data = doc.data();
+        snapshot.docs.forEach(roomDoc => {
+          const data = roomDoc.data();
           const roomAge = now - (data.createdAt?.toDate?.()?.getTime() || 0);
           
           // Poista yli 5 minuuttia vanhat tai epäaktiiviset huoneet
           if (roomAge > fiveMinutesAgo || !data.isActive) {
-            console.log("🗑️ Poistetaan vanha huone:", doc.id);
-            deletePromises.push(deleteDoc(doc(db, 'rooms', doc.id)));
+            console.log("🗑️ Poistetaan vanha huone:", roomDoc.id);
+            deletePromises.push(deleteDoc(doc(db, 'rooms', roomDoc.id)));
           }
         });
         
@@ -120,6 +120,22 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
   // Luo chat-huone toisen käyttäjän kanssa
   const createChatRoom = async (otherUser) => {
     try {
+      console.log("🏗️ Luodaan huone toisen käyttäjän kanssa:", otherUser);
+      
+      // Validoi otherUser
+      if (!otherUser || !otherUser.id || !otherUser.name) {
+        console.error("❌ Virheellinen otherUser:", otherUser);
+        setStatus('error');
+        return;
+      }
+      
+      // Validoi oma profiili
+      if (!profile?.displayName || !profile?.ageGroup) {
+        console.error("❌ Oma profiili puutteellinen:", profile);
+        setStatus('error');
+        return;
+      }
+      
       setStatus('matched');
       
       // Luo uniikki huone-ID
@@ -128,7 +144,7 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
       // Luo huone Firestoreen
       const roomData = {
         id: roomId,
-        userIds: [user.uid, otherUser.uid], // Yksinkertainen array uid:sta
+        userIds: [user.uid, otherUser.id], // Käytä otherUser.id eikä .uid
         users: [
           {
             uid: user.uid,
@@ -137,7 +153,7 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
             ready: false // Aluksi ei valmis
           },
           {
-            uid: otherUser.uid,
+            uid: otherUser.id, // Käytä otherUser.id eikä .uid
             displayName: otherUser.name,
             joinedAt: Date.now(),
             ready: false // Aluksi ei valmis
@@ -150,11 +166,15 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
         type: 'text' // vain tekstichat, ei videota
       };
 
+      console.log("💾 Tallennettava roomData:", roomData);
+
       const docRef = await addDoc(collection(db, 'rooms'), roomData);
       
       // Käytä todellista document ID:tä
       const actualRoomId = docRef.id;
       const actualRoomData = { ...roomData, id: actualRoomId };
+      
+      console.log("✅ Huone luotu ID:llä:", actualRoomId);
       
       // Merkitse itsemme valmiiksi huoneessa
       await updateDoc(doc(db, 'rooms', actualRoomId), {
@@ -164,6 +184,8 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
       // Poista molemmat käyttäjät waiting-listasta
       await deleteDoc(doc(db, 'waiting', user.uid));
       await deleteDoc(doc(db, 'waiting', otherUser.id));
+      
+      console.log("🎉 Siirtymä chat-huoneeseen");
       
       // Siirry chat-huoneeseen (odottamaan toista)
       onRoomJoined(actualRoomId, actualRoomData);
@@ -220,7 +242,8 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
       // Lisää itsensä waiting-listaan käyttäen user.uid:tä ID:nä
       const waitingRef = doc(db, 'waiting', user.uid);
       await setDoc(waitingRef, {
-        uid: user.uid,
+        id: user.uid, // Käytä 'id' kenttää yhteensopivuuden vuoksi
+        uid: user.uid, // Pidä uid myös
         name: workingProfile.displayName,
         ageGroup: workingProfile.ageGroup,
         timestamp: Date.now()

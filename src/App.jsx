@@ -61,15 +61,27 @@ function App() {
 
   // Kun käyttäjä asetetaan (kirjautuminen), siirry profiilisetupiin
   useEffect(() => {
-    if (user && !profile && currentView === 'auth') {
-      console.log("👤 Käyttäjä kirjautui, siirtymä profiiliin");
+    console.log("🔄 Tarkistetaan käyttäjän tila:", {
+      user: !!user,
+      profile: !!profile,
+      currentView,
+      userDisplayName: user?.displayName
+    });
+    
+    if (user && !profile) {
+      console.log("👤 Käyttäjä on kirjautunut mutta ei profiilia, siirtymä profiiliin");
       setCurrentView('profile');
+    } else if (user && profile) {
+      console.log("✅ Käyttäjä ja profiili OK, siirtymä matchmakeriin");
+      setCurrentView('matchmaker');
     }
-  }, [user, profile, currentView]);
+  }, [user, profile]);
 
   // Kun profiili on valmis, siirry matchmakeriin
   const handleProfileComplete = (profileData) => {
+    console.log("🎯 Profile complete callback kutsuttu:", profileData);
     setProfile(profileData);
+    console.log("🎮 Siirtymä matchmakeriin...");
     setCurrentView('matchmaker');
   };
 
@@ -101,25 +113,27 @@ function App() {
   }
 
   return (
-    <div className="app-container">
-      {/* Header */}
-      <header className="app-header">
-        <div className="header-content">
-          <h1 className="app-title">🔥 ChatNest</h1>
-          <div className="header-info">
-            {user && (
-              <div className="user-badge">
-                <div className="user-avatar">👤</div>
-                <span>{user.displayName}</span>
-                <span className="age-badge">{user.age}v</span>
-              </div>
-            )}
+    <div className={`app-container ${currentView === 'chat' ? 'chat-mode' : ''}`}>
+      {/* Header - piilossa chat-tilassa */}
+      {currentView !== 'chat' && (
+        <header className="app-header">
+          <div className="header-content">
+            <h1 className="app-title">🔥 ChatNest</h1>
+            <div className="header-info">
+              {user && (
+                <div className="user-badge">
+                  <div className="user-avatar">👤</div>
+                  <span>{user.displayName}</span>
+                  <span className="age-badge">{user.age}v</span>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       {/* Pääsisältö */}
-      <main className="app-main">
+      <main className={`app-main ${currentView === 'chat' ? 'chat-main' : ''}`}>
         {currentView === 'auth' && (
           <Auth user={user} setUser={setUser} />
         )}
@@ -150,19 +164,21 @@ function App() {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="app-footer">
-        <div className="footer-content">
-          <p>🛡️ Turvallinen chat • 🔒 Yksityisyys suojattu • 🚩 Raportoi väärinkäyttö</p>
-          <div className="footer-links">
-            <a href="#" onClick={(e) => e.preventDefault()}>Käyttöehdot</a>
-            <span>•</span>
-            <a href="#" onClick={(e) => e.preventDefault()}>Tietosuoja</a>
-            <span>•</span>
-            <a href="#" onClick={(e) => e.preventDefault()}>Tuki</a>
+      {/* Footer - piilossa chat-tilassa */}
+      {currentView !== 'chat' && (
+        <footer className="app-footer">
+          <div className="footer-content">
+            <p>🛡️ Turvallinen chat • 🔒 Yksityisyys suojattu • 🚩 Raportoi väärinkäyttö</p>
+            <div className="footer-links">
+              <a href="#" onClick={(e) => e.preventDefault()}>Käyttöehdot</a>
+              <span>•</span>
+              <a href="#" onClick={(e) => e.preventDefault()}>Tietosuoja</a>
+              <span>•</span>
+              <a href="#" onClick={(e) => e.preventDefault()}>Tuki</a>
+            </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
   );
 }

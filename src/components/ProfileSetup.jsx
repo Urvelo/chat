@@ -14,6 +14,8 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
   useEffect(() => {
     const checkExistingProfile = async () => {
       try {
+        console.log("📋 Tarkistetaan olemassa oleva profiili käyttäjälle:", user?.displayName);
+        
         // Tarkista localStorage:sta ensin
         const savedProfile = localStorage.getItem('chatnest-profile');
         if (savedProfile) {
@@ -21,18 +23,18 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
           
           // Jos vanhassa profiilissa ei ole ageGroup:ia, lisää se
           if (!userData.ageGroup) {
-            console.log("Vanhan profiilin päivitys - lisätään ageGroup");
+            console.log("🔄 Vanhan profiilin päivitys - lisätään ageGroup");
             userData.ageGroup = '15-20';
             localStorage.setItem('chatnest-profile', JSON.stringify(userData));
           }
           
-          console.log("localStorage profiili ladattu:", userData);
+          console.log("✅ localStorage profiili ladattu, ohitetaan setup");
           setProfile(userData);
           onProfileComplete(userData);
           return;
         }
 
-        // Tarkista Firestore:sta
+        console.log("📡 Tarkistetaan Firestore...");
         const docRef = doc(db, 'profiles', user.uid);
         const docSnap = await getDoc(docRef);
         
@@ -75,6 +77,8 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    console.log("📝 Profiilin luonti aloitettu...");
+    
     if (!profile.termsAccepted) {
       setError('Käyttöehtojen hyväksyntä on pakollinen.');
       return;
@@ -100,10 +104,13 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
         lastActive: new Date()
       };
 
+      console.log("💾 Tallennettava profiilidata:", profileData);
+
       // Tallenna Firestoreen ja localStorage
       await setDoc(doc(db, 'profiles', user.uid), profileData);
       localStorage.setItem('chatnest-profile', JSON.stringify(profileData));
       
+      console.log("✅ Profiili tallennettu, kutsutaan onProfileComplete");
       onProfileComplete(profileData);
     } catch (error) {
       console.error('Virhe profiilin tallennuksessa:', error);
