@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, db } from '../firebase';
+import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, deleteDoc, setDoc, serverTimestamp, db } from '../firebase';
 import { v4 as uuidv4 } from 'uuid';
 
 const Matchmaker = ({ user, profile, onRoomJoined }) => {
@@ -7,6 +7,7 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
   const [waitingUsers, setWaitingUsers] = useState([]);
   const [status, setStatus] = useState('idle'); // idle, searching, matched
   const [searchStartTime, setSearchStartTime] = useState(null);
+  const [unsubscribe, setUnsubscribe] = useState(null);
 
   // Kuuntele odottavia käyttäjiä samasta ikäryhmästä
   useEffect(() => {
@@ -66,7 +67,7 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
       await addDoc(collection(db, 'rooms'), roomData);
       
       // Poista molemmat käyttäjät waiting-listasta
-      await deleteDoc(doc(db, 'waiting', `waiting_${user.uid}`));
+      await deleteDoc(doc(db, 'waiting', user.uid));
       await deleteDoc(doc(db, 'waiting', otherUser.id));
       
       // Siirry chat-huoneeseen
@@ -92,16 +93,54 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
         return;
       }
       
-      // Lisää itsemme waiting-listaan
-      const waitingData = {
+      // Lisää itsensä waiting-listaan käyttäen user.uid:tä ID:nä
+      const waitingRef = doc(db, 'waiting', user.uid);
+      await setDoc(waitingRef, {
         uid: user.uid,
-        displayName: profile.displayName,
-        ageGroup: profile.ageGroup,
-        createdAt: serverTimestamp(),
-        lastSeen: serverTimestamp()
-      };
+        name: user.name,
+        ageGroup: user.ageGroup,
+        timestamp: Date.now()
+      });
+
+      console.log("Lisätty waiting listaan:", user.uid);
       
-      await addDoc(collection(db, 'waiting'), waitingData);
+      // Kuuntele waiting-listaa ja etsi match
+      const q = query(
+        collection(db, 'waiting'),
+        where('ageGroup', '==', user.ageGroup),
+        where('uid', '!=', user.uid)
+      );
+
+      console.log("Aloitetaan kuuntelu waiting listaa...");
+      
+      const unsubscribe = onSnapshot(q, async (snapshot) => {
+        console.log("onSnapshot triggered, löytyi dokumentteja:", snapshot.size);
+        
+        if (!snapshot.empty) {
+          const waitingUsers = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          
+          console.log("Waiting käyttäjät:", waitingUsers);
+          
+          // Ota ensimmäinen käyttäjä
+          const otherUser = waitingUsers[0];
+          console.log("Löytyi match:", otherUser);
+          
+          setStatus('Löytyi match! Luodaan chat...');
+          unsubscribe(); // Lopeta kuuntelu
+          
+          await createChatRoom(user, otherUser);
+        }
+      }, (error) => {
+        console.error("Virhe waiting lista kuuntelussa:", error);
+        setIsSearching(false);
+        setStatus('idle');
+      });
+      
+      // Tallenna unsubscribe funktio myöhempää käyttöä varten
+      setUnsubscribe(() => unsubscribe);
       
     } catch (error) {
       console.error('Virhe etsinnän aloituksessa:', error);
@@ -117,8 +156,14 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
       setStatus('idle');
       setSearchStartTime(null);
       
+      // Lopeta listener jos on käynnissä
+      if (unsubscribe) {
+        unsubscribe();
+        setUnsubscribe(null);
+      }
+      
       // Poista itsemme waiting-listasta
-      await deleteDoc(doc(db, 'waiting', `waiting_${user.uid}`));
+      await deleteDoc(doc(db, 'waiting', user.uid));
       
     } catch (error) {
       console.error('Virhe etsinnän lopetuksessa:', error);
