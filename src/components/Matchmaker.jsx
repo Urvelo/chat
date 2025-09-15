@@ -18,15 +18,17 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
 
     const q = query(
       collection(db, 'waiting'),
-      where('ageGroup', '==', profile.ageGroup),
-      where('uid', '!=', user.uid)
+      where('ageGroup', '==', profile.ageGroup)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const users = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const users = snapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        .filter(waitingUser => waitingUser.uid !== user.uid); // Suodata oma uid pois
+        
       setWaitingUsers(users);
       
       // Jos etsimme ja löytyy käyttäjä, luo huone
