@@ -8,6 +8,8 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
   const [status, setStatus] = useState('idle'); // idle, searching, matched
   const [searchStartTime, setSearchStartTime] = useState(null);
   const [unsubscribe, setUnsubscribe] = useState(null);
+  const [isHidden, setIsHidden] = useState(false);
+  const [activeUsersCount, setActiveUsersCount] = useState(0);
 
   // Debug loggaus
   console.log("Matchmaker saanut props:", { user, profile });
@@ -39,6 +41,15 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
 
     return unsubscribe;
   }, [profile?.ageGroup, user.uid, isSearching]);
+
+  // Kuuntele aktiivisten käyttäjien määrää
+  useEffect(() => {
+    const unsubscribeWaiting = onSnapshot(collection(db, 'waiting'), (snapshot) => {
+      setActiveUsersCount(snapshot.size);
+    });
+
+    return unsubscribeWaiting;
+  }, []);
 
     // Siivoa vanhat huoneet automaattisesti
   useEffect(() => {
@@ -333,6 +344,33 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
     }
   };
 
+  // Piilota käyttäjä - ei etsi eikä näy muille
+  const hideUser = async () => {
+    try {
+      setIsHidden(true);
+      setIsSearching(false);
+      setStatus('hidden');
+      
+      // Lopeta listener
+      if (unsubscribe) {
+        unsubscribe();
+        setUnsubscribe(null);
+      }
+      
+      // Poista waiting-listasta
+      await deleteDoc(doc(db, 'waiting', user.uid));
+      
+    } catch (error) {
+      console.error('Virhe piilottamisessa:', error);
+    }
+  };
+
+  // Tule takaisin näkyviin
+  const showUser = () => {
+    setIsHidden(false);
+    setStatus('idle');
+  };
+
   // Laske etsintäaika
   const getSearchDuration = () => {
     if (!searchStartTime) return 0;
@@ -344,7 +382,26 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
       <div className="matchmaker-content">
         <h2>🔍 Etsi chattikaveria</h2>
         
-        {status === 'idle' && (
+        {/* Aktiivisten käyttäjien näyttö */}
+        <div className="user-stats">
+          <p>👥 Aktiivisia käyttäjiä: <strong>{activeUsersCount}</strong></p>
+        </div>
+        
+        {status === 'hidden' && (
+          <div className="hidden-status">
+            <div className="hidden-icon">👻</div>
+            <h3>Olet piilossa</h3>
+            <p>Et näy muille käyttäjille etkä etsi chattikaveria.</p>
+            <button 
+              onClick={showUser}
+              className="show-user-btn"
+            >
+              👁️ Tule takaisin näkyviin
+            </button>
+          </div>
+        )}
+        
+        {status === 'idle' && !isHidden && (
           <div className="search-controls">
             <button 
               onClick={startSearching}
@@ -377,6 +434,13 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
               className="stop-search-btn"
             >
               ⏹️ Lopeta haku
+            </button>
+            
+            <button 
+              onClick={hideUser}
+              className="hide-user-btn"
+            >
+              👻 Piilota minut
             </button>
             
             <div className="tips">

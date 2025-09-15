@@ -78,6 +78,14 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       try {
         console.log("🔄 Merkitään chat valmiiksi huoneessa:", roomId);
         
+        // Varmista että olemme poissa waiting-listasta
+        try {
+          await deleteDoc(doc(db, 'waiting', user.uid));
+          console.log("🗑️ Varmistettu poisto waiting-listasta");
+        } catch (err) {
+          console.log("ℹ️ Käyttäjä ei ollut waiting-listassa (ok)");
+        }
+        
         // Yksinkertainen: aseta chat suoraan valmiiksi
         await updateDoc(doc(db, 'rooms', roomId), {
           bothReady: true,
@@ -463,11 +471,6 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
                 key={message.id}
                 className={`message-wrapper ${isOwn ? 'own' : 'other'}`}
               >
-                {showAvatar && !isOwn && (
-                  <div className="message-avatar">
-                    {message.senderName?.charAt(0)?.toUpperCase() || '👤'}
-                  </div>
-                )}
                 <div className={`message ${isOwn ? 'own' : 'other'} ${message.type === 'file' ? 'file-message' : ''}`}>
                   <div className="message-content">
                     {message.type === 'file' ? (

@@ -415,6 +415,79 @@ body {
   color: #ffffff;
 }
 
+/* Käyttäjätilastot */
+.user-stats {
+  text-align: center;
+  background: #1a1a1a;
+  border: 1px solid #333333;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border-radius: 8px;
+}
+
+.user-stats p {
+  color: #cccccc;
+  margin: 0;
+  font-size: 1rem;
+}
+
+/* Piilotus-tila */
+.hidden-status {
+  text-align: center;
+  padding: 2rem;
+  background: #1a1a0a;
+  border: 1px solid #444433;
+  margin: 1rem 0;
+}
+
+.hidden-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.hidden-status h3 {
+  color: #ffff88;
+  margin: 1rem 0;
+}
+
+.hidden-status p {
+  color: #ccccaa;
+  margin-bottom: 1.5rem;
+}
+
+/* Piilotus ja näyttämis napit */
+.hide-user-btn,
+.show-user-btn {
+  padding: 0.8rem 1.5rem;
+  border: 1px solid #666666;
+  background: #2a2a2a;
+  color: #cccccc;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-radius: 0;
+  margin: 0.5rem;
+}
+
+.hide-user-btn:hover {
+  background: #444444;
+  color: #ffffff;
+}
+
+.show-user-btn {
+  border-color: #ffff88;
+  background: #2a2a1a;
+  color: #ffff88;
+}
+
+.show-user-btn:hover {
+  background: #ffff88;
+  color: #000000;
+}
+
 .searching-status {
   text-align: center;
   padding: 2rem;
@@ -674,22 +747,6 @@ html, body {
   font-weight: bold;
   color: #ffffff;
   border: 2px solid #444444;
-  flex-shrink: 0;
-}
-
-.message-avatar {
-  width: 28px;
-  height: 28px;
-  background: linear-gradient(135deg, #333333 0%, #555555 100%);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.8rem;
-  font-weight: bold;
-  color: #ffffff;
-  border: 1px solid #444444;
-  margin-right: 0.5rem;
   flex-shrink: 0;
 }
 
