@@ -1,19 +1,23 @@
 import { getFunctions, httpsCallable, connectFunctionsEmulator } from 'firebase/functions';
+import { getApp } from 'firebase/app';
 
 // Turvallinen Firebase Functions moderation API
 class ModerationService {
   constructor() {
-    // Firebase Functions alustus
-    this.functions = getFunctions();
+    // Firebase Functions alustus - määritä oikea region
+    const app = getApp();
+    this.functions = getFunctions(app, 'europe-west1');
     
     // Jos kehitysympäristössä, yhdistä emulatoriin
-    if (import.meta.env.DEV) {
+    if (import.meta.env.DEV && false) { // Väliaikaisesti disabloitu CORS-ongelmien vuoksi
       try {
-        connectFunctionsEmulator(this.functions, 'localhost', 5001);
-        console.log('🔧 Yhdistetty Firebase Functions emulatoriin');
+        connectFunctionsEmulator(this.functions, '127.0.0.1', 5001);
+        console.log('🔧 Yhdistetty Firebase Functions emulatoriin (127.0.0.1:5001)');
       } catch (error) {
         console.log('⚠️ Functions emulator ei käytössä, käytetään live Firebase');
       }
+    } else {
+      console.log('🌐 Käytetään live Firebase Functions (europe-west1)');
     }
     
     // Käyttäjien moderation historia (session aikana)
@@ -90,14 +94,8 @@ class ModerationService {
 
       // Tarkista onko Functions käytössä
       if (this.functionsAvailable === false) {
-        console.warn('⚠️ Firebase Functions ei käytössä - sallitaan teksti');
-        return { 
-          isHarmful: false, 
-          categories: {}, 
-          flaggedCategories: [],
-          source: 'no-functions',
-          warning: 'Moderation ei käytössä'
-        };
+        console.warn('⚠️ Firebase Functions ei käytössä - yritetään silti kutsua');
+        // Älä salli automaattisesti, vaan yritä kutsu
       }
 
       // Kutsu Firebase Function
@@ -156,14 +154,8 @@ class ModerationService {
 
       // Tarkista onko Functions käytössä
       if (this.functionsAvailable === false) {
-        console.warn('⚠️ Firebase Functions ei käytössä - sallitaan kuva');
-        return { 
-          isHarmful: false, 
-          categories: {}, 
-          flaggedCategories: [],
-          source: 'no-functions',
-          warning: 'Moderation ei käytössä'
-        };
+        console.warn('⚠️ Firebase Functions ei käytössä - yritetään silti kutsua');
+        // Älä salli automaattisesti, vaan yritä kutsu
       }
 
       const result = await this.moderateImageFn({
@@ -599,14 +591,8 @@ class ModerationService {
 
       // Tarkista onko Functions käytössä
       if (this.functionsAvailable === false) {
-        console.warn('⚠️ Firebase Functions ei käytössä - sallitaan sisältö');
-        return { 
-          isHarmful: false, 
-          categories: {}, 
-          flaggedCategories: [],
-          source: 'no-functions',
-          warning: 'Moderation ei käytössä'
-        };
+        console.warn('⚠️ Firebase Functions ei käytössä - yritetään silti kutsua');
+        // Älä salli automaattisesti, vaan yritä kutsu
       }
 
       const result = await this.moderateContentFn({

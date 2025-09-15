@@ -1,7 +1,23 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { setGlobalOptions } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
-const cors = require('cors')({ origin: true });
+const cors = require('cors')({ 
+  origin: (origin, callback) => {
+    // Salli kaikki localhost ja GitHub Codespaces domainit
+    const allowedOrigins = [
+      /^https?:\/\/localhost(:\d+)?$/,
+      /^https:\/\/.*\.app\.github\.dev$/,
+      /^https:\/\/.*\.githubpreview\.dev$/,
+      /^https:\/\/.*\.preview\.app\.github\.dev$/
+    ];
+    
+    if (!origin || allowedOrigins.some(pattern => pattern.test(origin))) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
+});
 
 // Alusta Firebase Admin
 if (!admin.apps.length) {
@@ -304,4 +320,17 @@ exports.moderateContent = onCall(async (request) => {
     
     throw new HttpsError('internal', 'Content moderation failed', error.message);
   }
+});
+
+/**
+ * Test endpoint to verify Functions work
+ */
+exports.testEndpoint = onCall(async (request) => {
+  console.log('🧪 Test endpoint called!');
+  return {
+    message: 'Test works!',
+    timestamp: Date.now(),
+    hasData: !!request.data,
+    environment: process.env.NODE_ENV || 'unknown'
+  };
 });

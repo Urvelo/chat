@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, getDoc, deleteDoc, setDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '../firebase';
+import { smartModerationService } from '../utils/smart-moderation.js';
 
 const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
   const [messages, setMessages] = useState([]);
@@ -269,6 +270,28 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       
       console.log("🔗 Download URL:", downloadURL);
       
+      // 🛡️ KUVAN MODERATION TARKISTUS
+      if (isImage) {
+        console.log("Moderoidaan kuva:", downloadURL);
+        
+        const moderationResult = await smartModerationService.moderateImage(downloadURL, user.uid);
+        
+        console.log("Kuvan moderation tulos:", moderationResult);
+        
+        // Jos kuva estetään
+        if (moderationResult.isBlocked) {
+          // Poista kuva Storage:sta
+          await deleteObject(storageRef);
+          alert(moderationResult.warningMessage || 'Kuva estetty moderaation vuoksi');
+          return;
+        }
+        
+        // Jos haitallista sisältöä, näytä varoitus
+        if (moderationResult.isHarmful && moderationResult.warningMessage) {
+          alert(moderationResult.warningMessage);
+        }
+      }
+      
       // Lähetä viesti tiedostolla
       const messageData = {
         type: 'file',
@@ -307,6 +330,27 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     }
 
     try {
+      console.log("Moderoidaan viesti:", newMessage.trim());
+      
+      // 🛡️ MODERATION TARKISTUS
+      const moderationResult = await smartModerationService.moderateMessage(newMessage.trim(), user.uid);
+      
+      console.log("Moderation tulos:", moderationResult);
+      
+      // Jos viesti estetään
+      if (moderationResult.isBlocked) {
+        alert(moderationResult.warningMessage || 'Viesti estetty moderaation vuoksi');
+        setNewMessage(''); // Tyhjennä kenttä
+        return;
+      }
+      
+      // Jos haitallista sisältöä mutta ei estetä, näytä varoitus
+      if (moderationResult.isHarmful && moderationResult.warningMessage) {
+        alert(moderationResult.warningMessage);
+        // Jatka viestin lähettämistä varoituksen jälkeen
+      }
+      
+      // Lähetä viesti
       console.log("Lähetetään viesti:", newMessage.trim());
       
       const messageData = {
@@ -324,6 +368,22 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
 
     } catch (error) {
       console.error('Virhe viestin lähetyksessä:', error);
+      
+      // Jos moderation epäonnistui, salli viesti turvallisuussyistä
+      if (error.message?.includes('moderation')) {
+        console.warn('Moderation epäonnistui, lähetetään viesti silti');
+        
+        const messageData = {
+          text: newMessage.trim(),
+          senderId: user.uid,
+          senderName: profile.displayName,
+          timestamp: serverTimestamp(),
+          roomId: roomId
+        };
+
+        await addDoc(collection(db, 'rooms', roomId, 'messages'), messageData);
+        setNewMessage('');
+      }
     }
   };
 
