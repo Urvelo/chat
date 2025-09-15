@@ -212,12 +212,17 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
       let workingProfile = { ...profile };
       if (!workingProfile.ageGroup) {
         console.log("Korjataan profiili - lisätään ageGroup");
-        workingProfile.ageGroup = '15-20';
         
-        // Päivitä localStorage
-        localStorage.setItem('chatnest-profile', JSON.stringify(workingProfile));
+        // Laske ikäryhmä käyttäjän iän perusteella
+        const calculateAgeGroup = (age) => {
+          if (age >= 15 && age <= 17) return '15-17';
+          if (age >= 18 && age <= 25) return '18-25';
+          return '25+';
+        };
         
-        // Päivitä myös Firestore taustalla
+        workingProfile.ageGroup = calculateAgeGroup(user.age);
+        
+        // Päivitä Firestore taustalla
         try {
           await setDoc(doc(db, 'profiles', user.uid), workingProfile);
         } catch (error) {
@@ -339,12 +344,6 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
       <div className="matchmaker-content">
         <h2>🔍 Etsi chattikaveria</h2>
         
-        <div className="user-info">
-          <p>👋 Hei <strong>{profile.displayName}</strong>!</p>
-          <p>🎯 Ikäryhmä: <strong>{profile.ageGroup}</strong></p>
-          <p>📱 Etsimme sinulle samanikäistä chattikaveria...</p>
-        </div>
-
         {status === 'idle' && (
           <div className="search-controls">
             <button 
@@ -393,13 +392,6 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
             <p>Siirrytään chat-huoneeseen...</p>
           </div>
         )}
-
-        <div className="stats">
-          <h3>📊 Tilastot</h3>
-          <p>🌍 Aktiivisia käyttäjiä: ~{Math.floor(Math.random() * 50) + 20}</p>
-          <p>🔥 Chittejä tänään: ~{Math.floor(Math.random() * 200) + 100}</p>
-          <p>⭐ Keskimääräinen chatin pituus: ~12 minuuttia</p>
-        </div>
       </div>
     </div>
   );
