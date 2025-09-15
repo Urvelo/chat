@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, deleteDoc, setDoc, serverTimestamp, db } from '../firebase';
+import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, deleteDoc, setDoc, serverTimestamp, getDocs, db } from '../firebase';
 import { v4 as uuidv4 } from 'uuid';
 
 const Matchmaker = ({ user, profile, onRoomJoined }) => {
@@ -40,7 +40,47 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
     return unsubscribe;
   }, [profile?.ageGroup, user.uid, isSearching]);
 
-  // Kuuntele huoneita joissa käyttäjä on mukana (vain etsinnän aikana)
+    // Siivoa vanhat huoneet automaattisesti
+  useEffect(() => {
+    const cleanupOldRooms = async () => {
+      try {
+        const now = Date.now();
+        const fiveMinutesAgo = now - (5 * 60 * 1000);
+        
+        // Hae vanhat huoneet
+        const roomsQuery = query(collection(db, 'rooms'));
+        const snapshot = await getDocs(roomsQuery);
+        
+        const deletePromises = [];
+        
+        snapshot.docs.forEach(doc => {
+          const data = doc.data();
+          const roomAge = now - (data.createdAt?.toDate?.()?.getTime() || 0);
+          
+          // Poista yli 5 minuuttia vanhat tai epäaktiiviset huoneet
+          if (roomAge > fiveMinutesAgo || !data.isActive) {
+            console.log("🗑️ Poistetaan vanha huone:", doc.id);
+            deletePromises.push(deleteDoc(doc(db, 'rooms', doc.id)));
+          }
+        });
+        
+        if (deletePromises.length > 0) {
+          await Promise.all(deletePromises);
+          console.log(`✅ Siivottiin ${deletePromises.length} vanhaa huonetta`);
+        }
+      } catch (error) {
+        console.error("❌ Virhe huoneiden siivouksessa:", error);
+      }
+    };
+
+    // Suorita siivous heti ja sitten 30 sekunnin välein
+    cleanupOldRooms();
+    const interval = setInterval(cleanupOldRooms, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  // Kuuntele olemassa olevia huoneita joissa käyttäjä on mukana
   useEffect(() => {
     if (!user?.uid || !isSearching) return;
 
@@ -53,17 +93,25 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
       snapshot.docs.forEach(doc => {
         const roomData = { id: doc.id, ...doc.data() };
         
+        // Varmista että roomData on validia
+        if (!roomData || !roomData.users || !Array.isArray(roomData.users)) {
+          console.warn("⚠️ Virheellinen huonedata, ohitetaan:", roomData);
+          return;
+        }
+        
         // Tarkista että huone on aktiivinen ja luotu hiljattain (alle 5 min sitten)
         const roomAge = Date.now() - (roomData.createdAt?.toDate?.()?.getTime() || 0);
         const isRecentRoom = roomAge < 5 * 60 * 1000; // 5 minuuttia
         
         if (isSearching && roomData.isActive && isRecentRoom) {
-          console.log("Löytyi uusi huone jossa olen mukana:", roomData);
+          console.log("✅ Löytyi uusi huone jossa olen mukana:", roomData);
           setIsSearching(false);
           setStatus('matched');
           onRoomJoined(doc.id, roomData);
         }
       });
+    }, (error) => {
+      console.error("❌ Virhe huoneiden kuuntelussa:", error);
     });
 
     return unsubscribe;

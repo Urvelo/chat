@@ -13,8 +13,8 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // Hae toisen käyttäjän tiedot
-  const otherUser = roomData?.users?.find(u => u.uid !== user.uid);
+  // Hae toisen käyttäjän tiedot - varmista että roomData ja users on valideja
+  const otherUser = roomData?.users?.find?.(u => u?.uid !== user?.uid);
 
   // Kuuntele huoneen valmiutta
   useEffect(() => {
@@ -25,14 +25,27 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     const unsubscribe = onSnapshot(doc(db, 'rooms', roomId), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
+        
+        // Varmista että data on validia
+        if (!data) {
+          console.warn("⚠️ Huoneessa ei ole dataa");
+          return;
+        }
+        
         const bothReady = data.bothReady || false;
         const users = data.users || [];
         
+        // Varmista että users on array
+        if (!Array.isArray(users)) {
+          console.warn("⚠️ Users ei ole array:", users);
+          return;
+        }
+        
         // Tarkista onko molemmat merkinneet itsensä valmiiksi
-        const readyCount = users.filter(u => u.ready).length;
+        const readyCount = users.filter(u => u && u.ready).length;
         const allReady = readyCount >= 2;
         
-        console.log("Huoneen tila:", { bothReady, readyCount, allReady });
+        console.log("Huoneen tila:", { bothReady, readyCount, allReady, usersCount: users.length });
         
         if (allReady && !bothReady) {
           // Päivitä bothReady kun molemmat valmiita
@@ -41,7 +54,15 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         
         setRoomReady(allReady || bothReady);
         setWaitingForOther(!allReady && !bothReady);
+      } else {
+        console.warn("⚠️ Huone ei enää ole olemassa:", roomId);
+        // Huone on poistettu, palaa takaisin
+        onLeaveRoom();
       }
+    }, (error) => {
+      console.error("❌ Virhe huoneen kuuntelussa:", error);
+      // Jos kuuntelu epäonnistuu, palaa takaisin
+      onLeaveRoom();
     });
 
     return unsubscribe;
@@ -58,17 +79,24 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         if (roomDoc.exists()) {
           const data = roomDoc.data();
           const users = data.users || [];
-          const myIndex = users.findIndex(u => u.uid === user.uid);
+          
+          // Varmista että users on array
+          if (!Array.isArray(users)) {
+            console.warn("⚠️ Users ei ole array, ei voida merkitä valmiiksi");
+            return;
+          }
+          
+          const myIndex = users.findIndex(u => u && u.uid === user.uid);
           
           if (myIndex !== -1 && !users[myIndex].ready) {
-            console.log("Merkitään itsemme valmiiksi");
+            console.log("✅ Merkitään itsemme valmiiksi");
             await updateDoc(doc(db, 'rooms', roomId), {
               [`users.${myIndex}.ready`]: true
             });
           }
         }
       } catch (error) {
-        console.error("Virhe valmiuden merkitsemisessä:", error);
+        console.error("❌ Virhe valmiuden merkitsemisessä:", error);
       }
     };
 
