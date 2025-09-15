@@ -86,13 +86,30 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
   // Aloita käyttäjien etsintä
   const startSearching = async () => {
     try {
+      // Korjaa profiili jos ageGroup puuttuu
+      let workingProfile = { ...profile };
+      if (!workingProfile.ageGroup) {
+        console.log("Korjataan profiili - lisätään ageGroup");
+        workingProfile.ageGroup = '15-20';
+        
+        // Päivitä localStorage
+        localStorage.setItem('chatnest-profile', JSON.stringify(workingProfile));
+        
+        // Päivitä myös Firestore taustalla
+        try {
+          await setDoc(doc(db, 'profiles', user.uid), workingProfile);
+        } catch (error) {
+          console.warn("Firestore päivitys epäonnistui:", error);
+        }
+      }
+
       // Varmista että profile on validi
-      if (!profile?.ageGroup || !profile?.displayName) {
-        console.error('Profile puutteellinen:', {
-          profile: profile,
-          ageGroup: profile?.ageGroup,
-          displayName: profile?.displayName,
-          keys: Object.keys(profile || {})
+      if (!workingProfile?.ageGroup || !workingProfile?.displayName) {
+        console.error('Profile edelleen puutteellinen:', {
+          profile: workingProfile,
+          ageGroup: workingProfile?.ageGroup,
+          displayName: workingProfile?.displayName,
+          keys: Object.keys(workingProfile || {})
         });
         setStatus('Virhe: Profiili puutteellinen');
         return;
@@ -112,17 +129,17 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
       const waitingRef = doc(db, 'waiting', user.uid);
       await setDoc(waitingRef, {
         uid: user.uid,
-        name: profile.displayName,
-        ageGroup: profile.ageGroup,
+        name: workingProfile.displayName,
+        ageGroup: workingProfile.ageGroup,
         timestamp: Date.now()
       });
 
-      console.log("Lisätty waiting listaan:", user.uid, "nimi:", profile.displayName, "ageGroup:", profile.ageGroup);
+      console.log("Lisätty waiting listaan:", user.uid, "nimi:", workingProfile.displayName, "ageGroup:", workingProfile.ageGroup);
       
       // Kuuntele waiting-listaa ja etsi match
       const q = query(
         collection(db, 'waiting'),
-        where('ageGroup', '==', user.ageGroup),
+        where('ageGroup', '==', workingProfile.ageGroup),
         where('uid', '!=', user.uid)
       );
 
