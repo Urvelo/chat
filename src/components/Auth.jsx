@@ -1,51 +1,70 @@
 import { useState } from 'react';
-import { signInWithPopup, signOut } from 'firebase/auth';
-import { auth, googleProvider } from '../firebase';
 
 const Auth = ({ user, setUser }) => {
-  const [loading, setLoading] = useState(false);
+  const [name, setName] = useState('');
+  const [age, setAge] = useState('');
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const signInWithGoogle = async () => {
-    setLoading(true);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     setError(null);
-    
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      setUser(result.user);
-    } catch (error) {
-      console.error('Kirjautumisvirhe:', error);
-      setError('Kirjautuminen epäonnistui. Yritä uudelleen.');
-    } finally {
+    setLoading(true);
+
+    if (!name.trim()) {
+      setError('Nimi on pakollinen');
       setLoading(false);
+      return;
     }
+
+    if (!age || age < 13 || age > 99) {
+      setError('Ikä täytyy olla 13-99 vuotta');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Luo yksinkertainen käyttäjäobjekti
+      const newUser = {
+        uid: 'user-' + Math.random().toString(36).substr(2, 9),
+        displayName: name.trim(),
+        age: parseInt(age),
+        email: `${name.toLowerCase().replace(/\s+/g, '')}@chatnest.local`,
+        photoURL: null,
+        createdAt: new Date().toISOString()
+      };
+
+      // Tallenna localStorage
+      localStorage.setItem('chatnest-user', JSON.stringify(newUser));
+      
+      // Aseta käyttäjä
+      setUser(newUser);
+    } catch (error) {
+      console.error('Sisäänkirjautumisvirhe:', error);
+      setError('Jotain meni pieleen. Yritä uudelleen.');
+    }
+
+    setLoading(false);
   };
 
-  const handleSignOut = async () => {
-    setLoading(true);
-    try {
-      await signOut(auth);
-      setUser(null);
-    } catch (error) {
-      console.error('Uloskirjautumisvirhe:', error);
-      setError('Uloskirjautuminen epäonnistui.');
-    } finally {
-      setLoading(false);
-    }
+  const handleSignOut = () => {
+    localStorage.removeItem('chatnest-user');
+    localStorage.removeItem('chatnest-profile');
+    setUser(null);
   };
 
   if (user) {
     return (
       <div className="auth-container">
         <div className="user-info">
-          <img src={user.photoURL} alt="Profiili" className="profile-image" />
+          <div className="profile-image">👤</div>
           <p>Tervetuloa, {user.displayName}!</p>
+          <p>Ikä: {user.age} vuotta</p>
           <button 
             onClick={handleSignOut} 
-            disabled={loading}
             className="sign-out-btn"
           >
-            {loading ? 'Kirjaudutaan ulos...' : 'Kirjaudu ulos'}
+            Kirjaudu ulos
           </button>
         </div>
       </div>
@@ -55,21 +74,50 @@ const Auth = ({ user, setUser }) => {
   return (
     <div className="auth-container">
       <div className="login-box">
-        <h1>🔥 ChatNest</h1>
-        <p>Turvallinen satunnainen chat - aloita keskustelu!</p>
+        <h1>💬 ChatNest</h1>
+        <p>Aloita chattailu satunnaisten ihmisten kanssa</p>
         
         {error && <div className="error-message">{error}</div>}
         
-        <button 
-          onClick={signInWithGoogle} 
-          disabled={loading}
-          className="google-sign-in-btn"
-        >
-          {loading ? 'Kirjaudutaan...' : '🔐 Kirjaudu Google-tilillä'}
-        </button>
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="form-group">
+            <label htmlFor="name">Nimesi</label>
+            <input
+              id="name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Kirjoita nimesi..."
+              maxLength="30"
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="age">Ikäsi</label>
+            <input
+              id="age"
+              type="number"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              placeholder="Kirjoita ikäsi..."
+              min="13"
+              max="99"
+              required
+            />
+          </div>
+
+          <button 
+            type="submit" 
+            className="google-sign-in-btn"
+            disabled={loading}
+          >
+            {loading ? 'Aloitetaan...' : '🚀 Aloita chattailu'}
+          </button>
+        </form>
         
         <div className="disclaimer">
-          <p>Kirjautumalla hyväksyt käyttöehtomme. Käyttäydymme vastuullisesti!</p>
+          <p>Käyttämällä palvelua hyväksyt käyttöehtomme. Käyttäydymme vastuullisesti!</p>
         </div>
       </div>
     </div>

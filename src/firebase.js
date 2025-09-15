@@ -1,6 +1,5 @@
-// Firebase Configuration - ChatNest
+// Firebase Configuration - ChatNest (Vain Firestore chatille)
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 import { 
   getFirestore, 
   doc, 
@@ -31,22 +30,11 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firebase Authentication and get a reference to the service
-export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
-
 // Initialize Cloud Firestore and get a reference to the service
 export const db = getFirestore(app);
 
-// Configure Google Auth Provider
-googleProvider.setCustomParameters({
-  prompt: 'select_account',
-});
-
-// Export Firebase functions
+// Export Firestore functions
 export {
-  signInWithPopup,
-  signOut,
   doc,
   setDoc,
   getDoc,
@@ -61,4 +49,4 @@ export {
   serverTimestamp
 };
 
-console.log('🔥 Firebase initialisoitu onnistuneesti! ChatNest on valmis käyttöön.');
+console.log('🔥 Firebase (Firestore) initialisoitu onnistuneesti! ChatNest on valmis käyttöön.');

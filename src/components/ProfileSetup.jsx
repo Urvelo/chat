@@ -5,43 +5,34 @@ import { getCachedFingerprint } from '../utils/fingerprint';
 
 const ProfileSetup = ({ user, onProfileComplete }) => {
   const [profile, setProfile] = useState({
-    displayName: '',
-    birthYear: '',
     termsAccepted: false
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  // Laske ikäryhmä syntymävuodesta
-  const calculateAgeGroup = (birthYear) => {
-    const currentYear = new Date().getFullYear();
-    const age = currentYear - parseInt(birthYear);
-    
-    if (age < 18) return 'under18';
-    if (age <= 25) return '18-25';
-    if (age <= 35) return '26-35';
-    if (age <= 50) return '36-50';
-    return '50+';
-  };
-
   // Tarkista onko profiili jo olemassa
   useEffect(() => {
     const checkExistingProfile = async () => {
       try {
+        // Tarkista localStorage:sta ensin
+        const savedProfile = localStorage.getItem('chatnest-profile');
+        if (savedProfile) {
+          const userData = JSON.parse(savedProfile);
+          setProfile(userData);
+          onProfileComplete(userData);
+          return;
+        }
+
+        // Tarkista Firestore:sta
         const docRef = doc(db, 'profiles', user.uid);
         const docSnap = await getDoc(docRef);
         
         if (docSnap.exists()) {
           const userData = docSnap.data();
           setProfile(userData);
+          localStorage.setItem('chatnest-profile', JSON.stringify(userData));
           onProfileComplete(userData);
-        } else {
-          // Aseta oletusarvot
-          setProfile(prev => ({
-            ...prev,
-            displayName: user.displayName || ''
-          }));
         }
       } catch (error) {
         console.error('Virhe profiilin tarkistuksessa:', error);
@@ -65,17 +56,6 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validointi
-    if (!profile.displayName.trim()) {
-      setError('Nimi on pakollinen.');
-      return;
-    }
-    
-    if (!profile.birthYear || profile.birthYear < 1950 || profile.birthYear > 2010) {
-      setError('Syötä kelvollinen syntymävuosi (1950-2010).');
-      return;
-    }
-    
     if (!profile.termsAccepted) {
       setError('Käyttöehtojen hyväksyntä on pakollinen.');
       return;
@@ -88,24 +68,21 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
       // Hae laitetunniste
       const deviceFingerprint = await getCachedFingerprint();
       
-      // Laske ikäryhmä
-      const ageGroup = calculateAgeGroup(profile.birthYear);
-      
-      // Luo profiili
+      // Luo profiili (käytä käyttäjän ikää suoraan)
       const profileData = {
         uid: user.uid,
         email: user.email,
-        displayName: profile.displayName.trim(),
-        birthYear: parseInt(profile.birthYear),
-        ageGroup: ageGroup,
+        displayName: user.displayName,
+        age: user.age,
         deviceFingerprint: deviceFingerprint,
         termsAccepted: true,
         createdAt: new Date(),
         lastActive: new Date()
       };
 
-      // Tallenna Firestoreen
+      // Tallenna Firestoreen ja localStorage
       await setDoc(doc(db, 'profiles', user.uid), profileData);
+      localStorage.setItem('chatnest-profile', JSON.stringify(profileData));
       
       onProfileComplete(profileData);
     } catch (error) {
@@ -127,40 +104,20 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
   return (
     <div className="profile-setup-container">
       <div className="profile-form">
-        <h2>📝 Luo profiilisi</h2>
-        <p>Kerro hieman itsestäsi aloittaaksesi chatit!</p>
+        <h2>📝 Viimeistele profiilisi</h2>
+        <p>Tervetuloa {user.displayName}, {user.age} vuotta! Hyväksy käyttöehdot aloittaaksesi chatit.</p>
 
         {error && <div className="error-message">{error}</div>}
 
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="displayName">Näytettävä nimi *</label>
-            <input
-              type="text"
-              id="displayName"
-              name="displayName"
-              value={profile.displayName}
-              onChange={handleInputChange}
-              placeholder="Syötä nimesi..."
-              maxLength="30"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="birthYear">Syntymävuosi *</label>
-            <input
-              type="number"
-              id="birthYear"
-              name="birthYear"
-              value={profile.birthYear}
-              onChange={handleInputChange}
-              placeholder="esim. 1995"
-              min="1950"
-              max="2010"
-              required
-            />
-            <small>Ikäryhmä määrittää kenen kanssa voit chatata</small>
+          <div className="user-preview">
+            <div className="user-card">
+              <div className="user-avatar">👤</div>
+              <div className="user-info">
+                <h3>{user.displayName}</h3>
+                <p>{user.age} vuotta</p>
+              </div>
+            </div>
           </div>
 
           <div className="form-group checkbox-group">

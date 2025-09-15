@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from './firebase';
 import Auth from './components/Auth';
 import ProfileSetup from './components/ProfileSetup';
 import Matchmaker from './components/Matchmaker';
@@ -15,26 +13,35 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState('auth'); // auth, profile, matchmaker, chat
 
-  // Kuuntele autentikaation tilaa
+  // Lataa käyttäjätiedot localStorage:sta sivun latautuessa
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
+    const savedUser = localStorage.getItem('chatnest-user');
+    const savedProfile = localStorage.getItem('chatnest-profile');
+    
+    if (savedUser) {
+      const parsedUser = JSON.parse(savedUser);
+      setUser(parsedUser);
       
-      if (!user) {
-        // Käyttäjä kirjautui ulos - nollaa tila
-        setProfile(null);
-        setCurrentRoom(null);
-        setRoomData(null);
-        setCurrentView('auth');
+      if (savedProfile) {
+        const parsedProfile = JSON.parse(savedProfile);
+        setProfile(parsedProfile);
+        setCurrentView('matchmaker');
       } else {
-        // Käyttäjä kirjautui sisään
         setCurrentView('profile');
       }
-    });
-
-    return unsubscribe;
+    } else {
+      setCurrentView('auth');
+    }
+    
+    setLoading(false);
   }, []);
+
+  // Kun käyttäjä asetetaan (kirjautuminen), siirry profiilisetupiin
+  useEffect(() => {
+    if (user && !profile) {
+      setCurrentView('profile');
+    }
+  }, [user, profile]);
 
   // Kun profiili on valmis, siirry matchmakeriin
   const handleProfileComplete = (profileData) => {
@@ -78,11 +85,9 @@ function App() {
           <div className="header-info">
             {user && (
               <div className="user-badge">
-                <img src={user.photoURL} alt="Profiili" className="user-avatar" />
-                <span>{profile?.displayName || user.displayName}</span>
-                {profile?.ageGroup && (
-                  <span className="age-badge">{profile.ageGroup}</span>
-                )}
+                <div className="user-avatar">👤</div>
+                <span>{user.displayName}</span>
+                <span className="age-badge">{user.age}v</span>
               </div>
             )}
           </div>
