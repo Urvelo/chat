@@ -396,34 +396,161 @@ body {
   color: #666666;
 }
 
-/* Chat Styles */
-.matchmaker-container,
-.profile-setup-container,
-.chat-room-container {
+/* Matchmaker Specific Styles */
+.matchmaker-container {
   width: 100%;
   max-width: 600px;
   background: #1a1a1a;
   border: 1px solid #333333;
-  padding: 2rem;
+  padding: 2.5rem;
   border-radius: 0;
 }
 
-.matchmaker-container h2,
-.profile-setup-container h2,
-.chat-room-container h2 {
+.matchmaker-container h2 {
   color: #ffffff;
-  margin-bottom: 1rem;
-  font-weight: 600;
+  margin-bottom: 1.5rem;
+  font-weight: 700;
+  font-size: 1.8rem;
+  text-align: center;
 }
 
-.waiting-message,
-.status-message {
-  color: #cccccc;
+.ready-to-match {
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.start-search-btn {
+  padding: 1.5rem 3rem;
+  border: 2px solid #ffffff;
+  background: #000000;
+  color: #ffffff;
+  font-size: 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-radius: 0;
+  margin: 2rem auto;
+  display: block;
+  min-width: 250px;
+}
+
+.start-search-btn:hover {
+  background: #ffffff;
+  color: #000000;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(255, 255, 255, 0.3);
+}
+
+.stop-search-btn {
+  padding: 1rem 2rem;
+  border: 2px solid #ff4444;
+  background: #1a0000;
+  color: #ff6666;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-radius: 0;
+  margin: 1rem auto;
+  display: block;
+}
+
+.stop-search-btn:hover {
+  background: #ff4444;
+  color: #ffffff;
+}
+
+.searching-status {
   text-align: center;
   padding: 2rem;
   background: #0a0a0a;
   border: 1px solid #333333;
   margin: 1rem 0;
+}
+
+.searching-status h3 {
+  color: #ffffff;
+  margin: 1rem 0;
+  font-size: 1.3rem;
+}
+
+.searching-status p {
+  color: #cccccc;
+  margin: 0.5rem 0;
+}
+
+.spinner {
+  font-size: 2rem;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+.matched-status {
+  text-align: center;
+  padding: 2rem;
+  background: #001a00;
+  border: 1px solid #44ff44;
+  margin: 1rem 0;
+  color: #66ff66;
+}
+
+.success-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.info-box,
+.tips {
+  background: #1a1a1a;
+  border: 1px solid #333333;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  border-radius: 0;
+}
+
+.info-box p,
+.tips p {
+  color: #cccccc;
+  margin: 0 0 1rem 0;
+}
+
+.info-box strong,
+.tips strong {
+  color: #ffffff;
+}
+
+.info-box ul {
+  margin: 1rem 0 0 1.5rem;
+  color: #cccccc;
+}
+
+.info-box li {
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+}
+
+.stats {
+  background: #0a0a0a;
+  border: 1px solid #333333;
+  padding: 1.5rem;
+  margin-top: 2rem;
+  border-radius: 0;
+}
+
+.stats h3 {
+  color: #ffffff;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.stats p {
+  color: #cccccc;
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
 }
 
 .chat-messages {

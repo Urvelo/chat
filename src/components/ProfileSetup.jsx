@@ -73,6 +73,7 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
         email: user.email,
         displayName: user.displayName,
         age: user.age,
+        ageGroup: '15-20', // Kaikki 15-20 vuotiaat samassa ryhmässä
         deviceFingerprint: deviceFingerprint,
         termsAccepted: true,
         createdAt: new Date(),
