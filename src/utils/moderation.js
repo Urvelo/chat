@@ -295,8 +295,42 @@ class ModerationService {
         };
       }
       
-      // Jos sisältö on turvallista, salli
+      // HERKEMPI MODERATION - Tarkista myös matalat signaalit
+      const categoryScores = modResult.categoryScores || {};
+      const suspiciousCheck = this.checkSuspiciousContent(categoryScores);
+      
+      // Jos on vakava uhkaus, estä suoraan riippumatta rikkomushistoriasta
+      if (suspiciousCheck.severe) {
+        this.addViolation(userId, {
+          type: 'severe_threat',
+          categories: [suspiciousCheck.severeCategory],
+          content: text?.substring(0, 100) || '[kuva]',
+          confidence: modResult.confidence,
+          severity: 'high'
+        });
+        
+        console.log(`🚫 VAKAVA UHKAUS estetty käyttäjältä ${userId}: ${suspiciousCheck.severeCategory}`);
+        
+        return {
+          action: 'block',
+          message: this.getSevereMessage(suspiciousCheck.severeCategory),
+          reason: 'severe-threat',
+          severity: 'high'
+        };
+      }
+      
+      // Jos sisältö on turvallista OpenAI:n mukaan, mutta on epäilyttäviä signaaleja
       if (!modResult.isHarmful) {
+        if (suspiciousCheck.warnings.length > 0) {
+          console.log(`⚠️ Heikot signaalit käyttäjälle ${userId}:`, suspiciousCheck.warnings);
+          return { 
+            action: 'allow', 
+            reason: 'content-safe-with-warning',
+            confidence: modResult.confidence,
+            warning: `⚠️ Huom: ${suspiciousCheck.warnings.join(', ')}`
+          };
+        }
+        
         return { 
           action: 'allow', 
           reason: 'content-safe',
@@ -403,6 +437,110 @@ class ModerationService {
         error: error.message,
         warning: 'Moderation epäonnistui - sisältö sallittu turvallisuussyistä'
       };
+    }
+  }
+
+  /**
+   * Tarkista epäilyttävää sisältöä matalien kynnysarvojen perusteella
+   * @param {object} categoryScores - OpenAI:n kategoria-arvot
+   * @returns {object} - {warnings: array, severe: boolean, severeCategory: string}
+   */
+  checkSuspiciousContent(categoryScores) {
+    const warnings = [];
+    let severe = false;
+    let severeCategory = null;
+    
+    // HERKEMMÄT KYNNYSARVOT VAROITUKSILLE
+    const thresholds = {
+      violence: 0.0005,     // "tapan sut" = 0.001208 ✅ 
+      harassment: 0.01,     // "olet ruma" = 0.056343 ✅
+      hate: 0.001,          // "olet ruma" = 0.035133 ✅  
+      sexual: 0.002,        // "tapan sut" = 0.003054 ✅
+      'self-harm': 0.001,   // Itsetuhoisuus
+      illicit: 0.01         // Laiton toiminta
+    };
+    
+    // VAKAVAT UHKAUKSET - Korkeammat kynnysarvot suoraan estämiselle
+    const severeThresholds = {
+      violence: 0.05,       // "tapan sinut" = 0.082712 ✅ -> ESTO
+      harassment: 0.1,      // Vakava häirintä 
+      hate: 0.1,            // Vakava vihapuhe
+      'self-harm': 0.05     // Vakava itsetuhoisuus
+    };
+    
+    // Tarkista ensin vakavat uhkaukset
+    Object.entries(severeThresholds).forEach(([category, threshold]) => {
+      const score = categoryScores[category] || 0;
+      
+      if (score > threshold) {
+        severe = true;
+        severeCategory = category;
+        const percentage = (score * 100).toFixed(1);
+        console.log(`🚫 VAKAVA UHKAUS: ${category} ${percentage}%`);
+      }
+    });
+    
+    // Jos vakava uhkaus, älä anna pelkkiä varoituksia
+    if (severe) {
+      return { warnings: [], severe: true, severeCategory: severeCategory };
+    }
+    
+    // Tarkista normaali varoitustaso
+    Object.entries(thresholds).forEach(([category, threshold]) => {
+      const score = categoryScores[category] || 0;
+      
+      if (score > threshold) {
+        warnings.push(this.getSuspiciousWarning(category, score));
+      }
+    });
+    
+    return { warnings: warnings, severe: false, severeCategory: null };
+  }
+
+  /**
+   * Hae varoitusviesti kategorian perusteella
+   * @param {string} category - Kategoria
+   * @param {number} score - Score-arvo
+   * @returns {string} - Varoitusviesti
+   */
+  getSuspiciousWarning(category, score) {
+    const percentage = (score * 100).toFixed(1);
+    
+    switch (category) {
+      case 'violence':
+        return `Mahdollista väkivaltaista sisältöä (${percentage}%)`;
+      case 'harassment':
+        return `Mahdollista häirintää (${percentage}%)`;
+      case 'hate':
+        return `Mahdollista vihapuhetta (${percentage}%)`;
+      case 'sexual':
+        return `Mahdollista seksuaalista sisältöä (${percentage}%)`;
+      case 'self-harm':
+        return `Mahdollista itsetuhoisuutta (${percentage}%)`;
+      case 'illicit':
+        return `Mahdollista laitonta sisältöä (${percentage}%)`;
+      default:
+        return `Epäilyttävää sisältöä (${percentage}%)`;
+    }
+  }
+
+  /**
+   * Hae vakavan uhkauksen virheilmoitus
+   * @param {string} category - Vakava kategoria
+   * @returns {string} - Virheilmoitus
+   */
+  getSevereMessage(category) {
+    switch (category) {
+      case 'violence':
+        return '🚫 Vakavat väkivaltaiset uhkaukset ovat ehdottomasti kiellettyjä. Sinua on varoitettu.';
+      case 'harassment':
+        return '🚫 Vakava häirintä ja uhkailu on ehdottomasti kiellettyä.';
+      case 'hate':
+        return '🚫 Vakava vihapuhe ja syrjintä on ehdottomasti kiellettyä.';
+      case 'self-harm':
+        return '🚫 Vakavat itsetuhoiset uhkaukset on estetty. Jos tarvitset apua, ota yhteyttä kriisipuhelimeen.';
+      default:
+        return '🚫 Vakava haitallinen sisältö on ehdottomasti kiellettyä.';
     }
   }
 

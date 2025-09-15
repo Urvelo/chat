@@ -33,14 +33,13 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
         
       setWaitingUsers(users);
       
-      // Jos etsimme ja löytyy käyttäjä, luo huone
-      if (isSearching && users.length > 0) {
-        createChatRoom(users[0]);
-      }
+      // ❌ POISTETTU AUTOMAATTINEN ROOM LUONTI
+      // Tämä rikkoi olemassa olevia pareja kun kolmas käyttäjä tuli mukaan
+      // Nyt matchmaking tapahtuu vain startSearching funktiossa
     });
 
     return unsubscribe;
-  }, [profile?.ageGroup, user.uid, isSearching]);
+  }, [profile?.ageGroup, user.uid]);
 
   // Kuuntele aktiivisten käyttäjien määrää
   useEffect(() => {
@@ -296,7 +295,8 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
           
           console.log("Waiting käyttäjät (ilman omaa):", waitingUsers);
           
-          if (waitingUsers.length > 0) {
+          // ✅ KORJATTU: Tarkista että olemmeko edelleen etsimässä
+          if (waitingUsers.length > 0 && isSearching) {
             // Ota ensimmäinen käyttäjä
             const otherUser = waitingUsers[0];
             console.log("Löytyi match:", otherUser);
