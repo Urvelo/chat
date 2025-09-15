@@ -15,6 +15,7 @@ import {
   deleteDoc, 
   serverTimestamp 
 } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -33,6 +34,9 @@ const app = initializeApp(firebaseConfig);
 // Initialize Cloud Firestore and get a reference to the service
 export const db = getFirestore(app);
 
+// Initialize Cloud Storage and get a reference to the service
+export const storage = getStorage(app);
+
 // Export Firestore functions
 export {
   doc,
@@ -49,4 +53,14 @@ export {
   serverTimestamp
 };
 
+// Export Storage functions
+export {
+  ref,
+  uploadBytes,
+  uploadBytesResumable,
+  getDownloadURL,
+  deleteObject
+} from 'firebase/storage';
+
 console.log('🔥 Oikea Firebase käytössä - laitteet yhdistyvät!');
+console.log('💾 Storage käytössä - kuvat ja tiedostot tuettu!');

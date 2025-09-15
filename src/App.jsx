@@ -15,33 +15,57 @@ function App() {
 
   // Lataa käyttäjätiedot localStorage:sta sivun latautuessa
   useEffect(() => {
+    console.log("🔄 Ladataan käyttäjätiedot...");
+    
     const savedUser = localStorage.getItem('chatnest-user');
     const savedProfile = localStorage.getItem('chatnest-profile');
     
+    console.log("📱 Tallennettu käyttäjä:", !!savedUser);
+    console.log("👤 Tallennettu profiili:", !!savedProfile);
+    
     if (savedUser) {
-      const parsedUser = JSON.parse(savedUser);
-      setUser(parsedUser);
-      
-      if (savedProfile) {
-        const parsedProfile = JSON.parse(savedProfile);
-        setProfile(parsedProfile);
-        setCurrentView('matchmaker');
-      } else {
-        setCurrentView('profile');
+      try {
+        const parsedUser = JSON.parse(savedUser);
+        console.log("✅ Käyttäjä löytyi:", parsedUser.displayName);
+        setUser(parsedUser);
+        
+        if (savedProfile) {
+          try {
+            const parsedProfile = JSON.parse(savedProfile);
+            console.log("✅ Profiili löytyi, siirtymä matchmakeriin");
+            setProfile(parsedProfile);
+            setCurrentView('matchmaker');
+          } catch (error) {
+            console.error("❌ Virhe profiilin parseamisessa:", error);
+            localStorage.removeItem('chatnest-profile');
+            setCurrentView('profile');
+          }
+        } else {
+          console.log("📝 Profiilia ei löydy, siirtymä profiilisettingiin");
+          setCurrentView('profile');
+        }
+      } catch (error) {
+        console.error("❌ Virhe käyttäjän parseamisessa:", error);
+        localStorage.removeItem('chatnest-user');
+        localStorage.removeItem('chatnest-profile');
+        setCurrentView('auth');
       }
     } else {
+      console.log("🔐 Käyttäjää ei löydy, näytetään kirjautuminen");
       setCurrentView('auth');
     }
     
     setLoading(false);
+    console.log("✅ Lataus valmis");
   }, []);
 
   // Kun käyttäjä asetetaan (kirjautuminen), siirry profiilisetupiin
   useEffect(() => {
-    if (user && !profile) {
+    if (user && !profile && currentView === 'auth') {
+      console.log("👤 Käyttäjä kirjautui, siirtymä profiiliin");
       setCurrentView('profile');
     }
-  }, [user, profile]);
+  }, [user, profile, currentView]);
 
   // Kun profiili on valmis, siirry matchmakeriin
   const handleProfileComplete = (profileData) => {

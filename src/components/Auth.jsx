@@ -24,6 +24,8 @@ const Auth = ({ user, setUser }) => {
     }
 
     try {
+      console.log("🚀 Aloitetaan kirjautuminen:", name.trim(), "ikä:", age);
+      
       // Luo yksinkertainen käyttäjäobjekti
       const newUser = {
         uid: 'user-' + Math.random().toString(36).substr(2, 9),
@@ -34,13 +36,19 @@ const Auth = ({ user, setUser }) => {
         createdAt: new Date().toISOString()
       };
 
+      console.log("💾 Tallennetaan käyttäjä:", newUser);
+      
       // Tallenna localStorage
       localStorage.setItem('chatnest-user', JSON.stringify(newUser));
       
+      console.log("✅ Käyttäjä tallennettu, asetetaan tilaan");
+      
       // Aseta käyttäjä
       setUser(newUser);
+      
+      console.log("🎉 Kirjautuminen valmis!");
     } catch (error) {
-      console.error('Sisäänkirjautumisvirhe:', error);
+      console.error('❌ Sisäänkirjautumisvirhe:', error);
       setError('Jotain meni pieleen. Yritä uudelleen.');
     }
 

@@ -597,10 +597,52 @@ html, body {
   .chat-container {
     position: relative;
     width: 100%;
-    max-width: 420px;
-    height: 650px;
+    max-width: min(600px, 90vw); /* Leve���mpi mutta ei liian leveä */
+    height: 700px; /* Korkeampi desktop-versio */
     border: 1px solid #333333;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    border-radius: 12px; /* Pyöristetyt kulmat desktopissa */
+    overflow: hidden;
+  }
+
+  .app-container {
+    padding: 2rem;
+    justify-content: center;
+  }
+
+  /* Keskitä chat desktopissa */
+  .app-main {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - 200px);
+  }
+
+  /* Desktop chat input adjustments */
+  .chat-input-container {
+    padding: 1.2rem 1.5rem;
+  }
+
+  .chat-input {
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+  }
+
+  .chat-send-btn {
+    width: 50px;
+    height: 50px;
+  }
+
+  .chat-file-btn {
+    width: 50px;
+    height: 50px;
+  }
+}
+
+/* Suuret näytöt - rajoita leveyttä */
+@media (min-width: 1200px) {
+  .chat-container {
+    max-width: 500px; /* Ei liian leveä isoilla näytöillä */
   }
 }
 
@@ -808,8 +850,36 @@ html, body {
 
 .chat-input-form {
   display: flex;
-  gap: 1rem;
   align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.chat-file-btn {
+  background: linear-gradient(135deg, #666666 0%, #444444 100%);
+  border: none;
+  color: #ffffff;
+  padding: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1.1rem;
+  width: 45px;
+  height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.chat-file-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #777777 0%, #555555 100%);
+  transform: scale(1.05);
+}
+
+.chat-file-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .chat-input {
@@ -832,6 +902,17 @@ html, body {
 
 .chat-input::placeholder {
   color: #666666;
+}
+
+.chat-input:disabled {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.5);
+  cursor: not-allowed;
+}
+
+.chat-input:disabled::placeholder {
+  color: rgba(255, 255, 255, 0.3);
 }
 
 .chat-send-btn {
@@ -881,6 +962,40 @@ html, body {
   padding: 3rem 2rem;
   font-style: italic;
   font-size: 1.1rem;
+}
+
+/* Odotustila toiselle käyttäjälle */
+.waiting-for-other {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: rgba(255, 255, 255, 0.9);
+  text-align: center;
+  padding: 2rem;
+}
+
+.waiting-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  animation: pulse 2s infinite;
+}
+
+.waiting-for-other h3 {
+  color: white;
+  margin-bottom: 0.5rem;
+  font-size: 1.2rem;
+}
+
+.waiting-for-other p {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 /* Smooth scrollbar */
@@ -945,7 +1060,7 @@ html, body {
   
   .chat-input-container {
     padding: 1rem;
-    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    padding-bottom: calc(2rem + env(safe-area-inset-bottom) + 30px);
   }
   
   .chat-input {
@@ -974,11 +1089,94 @@ html, body {
     max-width: 90%;
   }
 }
-}
 
 .message-content {
   color: #ffffff;
   margin-bottom: 0.25rem;
+  word-wrap: break-word;
+}
+
+/* File message styles */
+.file-message {
+  max-width: 300px;
+}
+
+.file-content {
+  width: 100%;
+}
+
+.image-container {
+  width: 100%;
+}
+
+.message-image {
+  width: 100%;
+  max-width: 250px;
+  height: auto;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.message-image:hover {
+  transform: scale(1.02);
+}
+
+.file-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 0.25rem;
+}
+
+.file-download {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+.file-icon {
+  font-size: 1.5rem;
+}
+
+.file-details {
+  flex: 1;
+}
+
+.file-name {
+  font-weight: 500;
+  color: #ffffff;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.file-size {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.file-download-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 50%;
+  width: 35px;
+  height: 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: #ffffff;
+  transition: background 0.2s ease;
+}
+
+.file-download-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .message-time {

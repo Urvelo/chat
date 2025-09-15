@@ -85,17 +85,20 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
           {
             uid: user.uid,
             displayName: profile.displayName,
-            joinedAt: Date.now()
+            joinedAt: Date.now(),
+            ready: false // Aluksi ei valmis
           },
           {
             uid: otherUser.uid,
             displayName: otherUser.name,
-            joinedAt: Date.now()
+            joinedAt: Date.now(),
+            ready: false // Aluksi ei valmis
           }
         ],
         ageGroup: profile.ageGroup,
         createdAt: serverTimestamp(),
         isActive: true,
+        bothReady: false, // Molemmat eivät vielä valmiita
         type: 'text' // vain tekstichat, ei videota
       };
 
@@ -105,11 +108,16 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
       const actualRoomId = docRef.id;
       const actualRoomData = { ...roomData, id: actualRoomId };
       
+      // Merkitse itsemme valmiiksi huoneessa
+      await updateDoc(doc(db, 'rooms', actualRoomId), {
+        [`users.${roomData.users.findIndex(u => u.uid === user.uid)}.ready`]: true
+      });
+      
       // Poista molemmat käyttäjät waiting-listasta
       await deleteDoc(doc(db, 'waiting', user.uid));
       await deleteDoc(doc(db, 'waiting', otherUser.id));
       
-      // Siirry chat-huoneeseen
+      // Siirry chat-huoneeseen (odottamaan toista)
       onRoomJoined(actualRoomId, actualRoomData);
       
     } catch (error) {
