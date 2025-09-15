@@ -9,6 +9,9 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
   const [searchStartTime, setSearchStartTime] = useState(null);
   const [unsubscribe, setUnsubscribe] = useState(null);
 
+  // Debug loggaus
+  console.log("Matchmaker saanut props:", { user, profile });
+
   // Kuuntele odottavia käyttäjiä samasta ikäryhmästä
   useEffect(() => {
     if (!profile?.ageGroup) return;
@@ -83,6 +86,13 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
   // Aloita käyttäjien etsintä
   const startSearching = async () => {
     try {
+      // Varmista että profile on validi
+      if (!profile?.ageGroup || !profile?.displayName) {
+        console.error('Profile puutteellinen:', profile);
+        setStatus('Virhe: Profiili puutteellinen');
+        return;
+      }
+
       setIsSearching(true);
       setStatus('searching');
       setSearchStartTime(Date.now());
@@ -102,7 +112,7 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
         timestamp: Date.now()
       });
 
-      console.log("Lisätty waiting listaan:", user.uid, "nimi:", profile.displayName);
+      console.log("Lisätty waiting listaan:", user.uid, "nimi:", profile.displayName, "ageGroup:", profile.ageGroup);
       
       // Kuuntele waiting-listaa ja etsi match
       const q = query(
