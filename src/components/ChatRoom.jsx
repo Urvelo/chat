@@ -69,6 +69,24 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     }
   };
 
+  // Deaktivoi huone ja poistu
+  const leaveRoom = async () => {
+    try {
+      // Merkitse huone epäaktiiviseksi
+      await updateDoc(doc(db, 'rooms', roomId), {
+        isActive: false,
+        leftAt: serverTimestamp()
+      });
+      
+      console.log("Huone deaktivoitu");
+    } catch (error) {
+      console.error('Virhe huoneen deaktivoinnissa:', error);
+    } finally {
+      // Poistu huoneesta aina
+      onLeaveRoom();
+    }
+  };
+
   // Formatoi aika
   const formatTime = (timestamp) => {
     if (!timestamp) return '';
@@ -111,7 +129,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
           </div>
         </div>
         <div className="chat-actions">
-          <button onClick={onLeaveRoom} className="leave-btn">
+          <button onClick={leaveRoom} className="leave-btn">
             ✖️
           </button>
         </div>

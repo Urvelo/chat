@@ -40,9 +40,9 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
     return unsubscribe;
   }, [profile?.ageGroup, user.uid, isSearching]);
 
-  // Kuuntele huoneita joissa käyttäjä on mukana
+  // Kuuntele huoneita joissa käyttäjä on mukana (vain etsinnän aikana)
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!user?.uid || !isSearching) return;
 
     const q = query(
       collection(db, 'rooms'),
@@ -53,8 +53,12 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
       snapshot.docs.forEach(doc => {
         const roomData = { id: doc.id, ...doc.data() };
         
-        if (isSearching) {
-          console.log("Löytyi huone jossa olen mukana:", roomData);
+        // Tarkista että huone on aktiivinen ja luotu hiljattain (alle 5 min sitten)
+        const roomAge = Date.now() - (roomData.createdAt?.toDate?.()?.getTime() || 0);
+        const isRecentRoom = roomAge < 5 * 60 * 1000; // 5 minuuttia
+        
+        if (isSearching && roomData.isActive && isRecentRoom) {
+          console.log("Löytyi uusi huone jossa olen mukana:", roomData);
           setIsSearching(false);
           setStatus('matched');
           onRoomJoined(doc.id, roomData);
