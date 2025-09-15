@@ -136,11 +136,10 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
 
       console.log("Lisätty waiting listaan:", user.uid, "nimi:", workingProfile.displayName, "ageGroup:", workingProfile.ageGroup);
       
-      // Kuuntele waiting-listaa ja etsi match
+      // Kuuntele waiting-listaa ja etsi match (yksinkertainen query ilman indeksiä)
       const q = query(
         collection(db, 'waiting'),
-        where('ageGroup', '==', workingProfile.ageGroup),
-        where('uid', '!=', user.uid)
+        where('ageGroup', '==', workingProfile.ageGroup)
       );
 
       console.log("Aloitetaan kuuntelu waiting listaa...");
@@ -149,21 +148,25 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
         console.log("onSnapshot triggered, löytyi dokumentteja:", snapshot.size);
         
         if (!snapshot.empty) {
-          const waitingUsers = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
+          const waitingUsers = snapshot.docs
+            .map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            }))
+            .filter(waitingUser => waitingUser.uid !== user.uid); // Suodata oma uid pois
           
-          console.log("Waiting käyttäjät:", waitingUsers);
+          console.log("Waiting käyttäjät (ilman omaa):", waitingUsers);
           
-          // Ota ensimmäinen käyttäjä
-          const otherUser = waitingUsers[0];
-          console.log("Löytyi match:", otherUser);
-          
-          setStatus('Löytyi match! Luodaan chat...');
-          unsubscribe(); // Lopeta kuuntelu
-          
-          await createChatRoom(user, otherUser);
+          if (waitingUsers.length > 0) {
+            // Ota ensimmäinen käyttäjä
+            const otherUser = waitingUsers[0];
+            console.log("Löytyi match:", otherUser);
+            
+            setStatus('Löytyi match! Luodaan chat...');
+            unsubscribe(); // Lopeta kuuntelu
+            
+            await createChatRoom(user, otherUser);
+          }
         }
       }, (error) => {
         console.error("Virhe waiting lista kuuntelussa:", error);
