@@ -17,8 +17,8 @@ const Auth = ({ user, setUser }) => {
       return;
     }
 
-    if (!age || age < 13 || age > 99) {
-      setError('Ikä täytyy olla 13-99 vuotta');
+    if (!age || age < 15 || age > 20) {
+      setError('Ikä täytyy olla 15-20 vuotta');
       setLoading(false);
       return;
     }
@@ -101,8 +101,8 @@ const Auth = ({ user, setUser }) => {
               value={age}
               onChange={(e) => setAge(e.target.value)}
               placeholder="Kirjoita ikäsi..."
-              min="13"
-              max="99"
+              min="15"
+              max="20"
               required
             />
           </div>

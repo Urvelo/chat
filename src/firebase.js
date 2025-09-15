@@ -13,15 +13,19 @@ let mockData = {
   reports: {}
 };
 
-// Luo simuloituja käyttäjiä testikäyttöön
+// Luo simuloituja käyttäjiä testikäyttöön (15-20 vuotiaat)
 const createMockUsers = () => {
   const mockUsers = [
-    { name: 'Anna', age: 22 },
-    { name: 'Mikael', age: 19 },
-    { name: 'Sofia', age: 25 },
-    { name: 'Jukka', age: 31 },
-    { name: 'Emma', age: 20 },
-    { name: 'Ville', age: 28 }
+    { name: 'Aino', age: 17 },
+    { name: 'Eetu', age: 16 },
+    { name: 'Liisa', age: 18 },
+    { name: 'Joona', age: 19 },
+    { name: 'Elli', age: 15 },
+    { name: 'Matias', age: 20 },
+    { name: 'Ida', age: 17 },
+    { name: 'Vili', age: 16 },
+    { name: 'Siiri', age: 18 },
+    { name: 'Roni', age: 19 }
   ];
 
   mockUsers.forEach((user, index) => {
