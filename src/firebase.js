@@ -36,10 +36,30 @@ loadMockData();
 // Mock Firestore functions
 export const db = {};
 
-export const doc = (collection, id) => ({ collection, id });
+export const doc = (collectionOrDb, collectionName, id) => {
+  // Käsittele eri tapoja kutsua doc()
+  if (typeof collectionOrDb === 'string') {
+    // doc('collection', 'id')
+    return { collection: collectionOrDb, id: collectionName };
+  } else if (collectionName && id) {
+    // doc(db, 'collection', 'id')
+    return { collection: collectionName, id: id };
+  } else {
+    // doc(collection, 'id')
+    return { collection: collectionOrDb.name || 'unknown', id: collectionName };
+  }
+};
 
 export const setDoc = async (docRef, data) => {
-  const { collection, id } = docRef;
+  let collection, id;
+  
+  if (docRef.collection && docRef.id) {
+    collection = docRef.collection;
+    id = docRef.id;
+  } else {
+    console.warn('setDoc: virheellinen docRef', docRef);
+    return;
+  }
   
   if (!mockData[collection]) {
     mockData[collection] = {};
@@ -56,7 +76,19 @@ export const setDoc = async (docRef, data) => {
 };
 
 export const getDoc = async (docRef) => {
-  const { collection, id } = docRef;
+  let collection, id;
+  
+  if (docRef.collection && docRef.id) {
+    collection = docRef.collection;
+    id = docRef.id;
+  } else {
+    console.warn('getDoc: virheellinen docRef', docRef);
+    return {
+      exists: () => false,
+      data: () => ({})
+    };
+  }
+  
   const data = mockData[collection]?.[id];
   
   return {
@@ -65,7 +97,18 @@ export const getDoc = async (docRef) => {
   };
 };
 
-export const collection = (name) => ({ name });
+export const collection = (dbOrName, collectionName) => {
+  // Käsittele eri tapoja kutsua collection()
+  if (typeof dbOrName === 'string') {
+    // collection('name')
+    return { name: dbOrName };
+  } else if (collectionName) {
+    // collection(db, 'name')
+    return { name: collectionName };
+  } else {
+    return { name: 'unknown' };
+  }
+};
 
 export const query = (collection, ...conditions) => ({ collection, conditions });
 
@@ -74,7 +117,15 @@ export const where = (field, operator, value) => ({ field, operator, value });
 export const orderBy = (field, direction = 'asc') => ({ field, direction });
 
 export const addDoc = async (collectionRef, data) => {
-  const collectionName = collectionRef.name;
+  let collectionName;
+  
+  if (collectionRef.name) {
+    collectionName = collectionRef.name;
+  } else {
+    console.warn('addDoc: virheellinen collectionRef', collectionRef);
+    collectionName = 'unknown';
+  }
+  
   const id = 'mock-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
   
   if (!mockData[collectionName]) {
