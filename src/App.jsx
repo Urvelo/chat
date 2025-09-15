@@ -69,7 +69,7 @@ function App() {
       <div className="app-container">
         <div className="loading-screen">
           <div className="loading-spinner">🔄</div>
-          <h2>ChatNest</h2>
+          <h2>Chat nuorille</h2>
           <p>Ladataan...</p>
         </div>
       </div>

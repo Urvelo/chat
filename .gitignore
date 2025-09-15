@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# Environment variables - ÄLKÄÄ koskaan committoiko API-avaimia!
+.env
+.env.local
+.env.production
+.env.development
+functions/.env
+functions/.env.local
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

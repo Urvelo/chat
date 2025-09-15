@@ -31,7 +31,7 @@ const Auth = ({ user, setUser }) => {
         uid: 'user-' + Math.random().toString(36).substr(2, 9),
         displayName: name.trim(),
         age: parseInt(age),
-        email: `${name.toLowerCase().replace(/\s+/g, '')}@chatnest.local`,
+        email: `${name.toLowerCase().replace(/\s+/g, '')}@chat-nuorille.local`,
         photoURL: null,
         createdAt: new Date().toISOString()
       };
@@ -80,7 +80,7 @@ const Auth = ({ user, setUser }) => {
   return (
     <div className="auth-container">
       <div className="login-box">
-        <h1>💬 ChatNest</h1>
+        <h1>💬 Chat nuorille</h1>
         <p>Aloita chattailu satunnaisten ihmisten kanssa</p>
         
         {error && <div className="error-message">{error}</div>}

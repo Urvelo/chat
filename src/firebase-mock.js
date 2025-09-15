@@ -1,8 +1,8 @@
-// Firebase Configuration - ChatNest
+// Firebase Configuration - Chat nuorille
 // Käytä mock-implementaatiota kunnes Firestore-säännöt korjataan
 
 // Mock Firebase - toimii ilman autentikointia
-console.log('🚀 ChatNest käynnistyy Mock-modessa - HUOM: Ei toimi cross-device!');
+console.log('🚀 Chat nuorille käynnistyy Mock-modessa - HUOM: Ei toimi cross-device!');
 console.log('💡 Cross-device toimivuuteen tarvitaan oikea Firebase.');
 console.log('📋 Ohje: Aseta Firestore Rules -> allow read, write: if true;');
 
@@ -49,7 +49,7 @@ const createMockUsers = () => {
 
 // Lataa data localStorage:sta
 const loadMockData = () => {
-  const saved = localStorage.getItem('chatnest-mock-data');
+  const saved = localStorage.getItem('chat-nuorille-mock-data');
   if (saved) {
     try {
       mockData = JSON.parse(saved);
@@ -81,7 +81,7 @@ const loadMockData = () => {
 
 // Tallenna data localStorage:een
 const saveMockData = () => {
-  localStorage.setItem('chatnest-mock-data', JSON.stringify(mockData));
+  localStorage.setItem('chat-nuorille-mock-data', JSON.stringify(mockData));
 };
 
 // Alusta data
@@ -296,6 +296,6 @@ export const deleteDoc = async (docRef) => {
 
 export const serverTimestamp = () => new Date();
 
-console.log('🎉 Mock Firebase valmis! ChatNest toimii paikallisesti.');
+console.log('🎉 Mock Firebase valmis! Chat nuorille toimii paikallisesti.');
 console.log('⚠️  HUOMIO: Mock ei tue cross-device chattailua!');
 console.log('� Cross-device käyttöön: Korjaa Firestore Rules ja vaihda oikeaan Firebase.');

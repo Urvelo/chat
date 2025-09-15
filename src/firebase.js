@@ -1,4 +1,4 @@
-// Firebase Configuration - ChatNest (Oikea Firebase cross-device)
+// Firebase Configuration - Chat nuorille (Oikea Firebase cross-device)
 import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, 
