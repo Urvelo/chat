@@ -80,7 +80,7 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
     return () => clearInterval(interval);
   }, []);
 
-  // Kuuntele olemassa olevia huoneita joissa käyttäjä on mukana
+  // Kuuntele olemassa olevia huoneita joissa käyttäjä on mukana - korjattu versio
   useEffect(() => {
     if (!user?.uid || !isSearching) return;
 
@@ -90,8 +90,11 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      snapshot.docs.forEach(doc => {
-        const roomData = { id: doc.id, ...doc.data() };
+      // Käsittele vain uusimmat muutokset tässä sessiossa
+      const changes = snapshot.docChanges().filter(change => change.type === 'added');
+      
+      changes.forEach(change => {
+        const roomData = { id: change.doc.id, ...change.doc.data() };
         
         // Varmista että roomData on validia
         if (!roomData || !roomData.users || !Array.isArray(roomData.users)) {
@@ -99,15 +102,20 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
           return;
         }
         
-        // Tarkista että huone on aktiivinen ja luotu hiljattain (alle 5 min sitten)
+        // Tarkista että huone on äsken luotu (alle 30 sekuntia sitten)
         const roomAge = Date.now() - (roomData.createdAt?.toDate?.()?.getTime() || 0);
-        const isRecentRoom = roomAge < 5 * 60 * 1000; // 5 minuuttia
+        const isNewRoom = roomAge < 30 * 1000; // 30 sekuntia
         
-        if (isSearching && roomData.isActive && isRecentRoom) {
-          console.log("✅ Löytyi uusi huone jossa olen mukana:", roomData);
+        if (roomData.isActive && isNewRoom) {
+          console.log("🆕 Löytyi uusi huone jossa olen mukana:", roomData.id);
           setIsSearching(false);
           setStatus('matched');
-          onRoomJoined(doc.id, roomData);
+          onRoomJoined(change.doc.id, roomData);
+        } else {
+          console.log("⏰ Huone liian vanha tai epäaktiivinen, ohitetaan:", {
+            age: Math.round(roomAge / 1000),
+            isActive: roomData.isActive
+          });
         }
       });
     }, (error) => {

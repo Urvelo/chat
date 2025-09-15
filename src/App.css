@@ -20,79 +20,17 @@ body {
   background: #0a0a0a;
 }
 
-/* Header */
-.app-header {
-  background: linear-gradient(90deg, #000000 0%, #1a1a1a 100%);
-  border-bottom: 1px solid #333333;
-  padding: 1rem 0;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.header-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.app-title {
-  font-size: 1.8rem;
-  font-weight: 800;
-  color: #ffffff;
-  text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
-}
-
-.user-badge {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  background: #1a1a1a;
-  border: 1px solid #333333;
-  padding: 0.5rem 1rem;
-  border-radius: 0;
-}
-
-.user-avatar {
-  font-size: 1.5rem;
-  background: #333333;
-  border: 1px solid #555555;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 0;
-}
-
-.age-badge {
-  background: #ffffff;
-  color: #000000;
-  padding: 0.25rem 0.5rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  border-radius: 0;
-}
-
-/* Main Content */
+/* Main Content - täyttää koko näytön */
 .app-main {
   flex: 1;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 2rem 1rem;
-  min-height: calc(100vh - 140px);
+  min-height: 100vh;
 }
 
-/* Chat mode - full screen without header/footer */
-.app-container.chat-mode {
-  height: 100vh;
-  overflow: hidden;
-}
-
+/* Chat mode - full screen */
 .app-main.chat-main {
   padding: 0;
   min-height: 100vh;
@@ -101,7 +39,7 @@ body {
 }
 
 /* Varmista että muut näkymät scrollaavat normaalisti */
-.app-container:not(.chat-mode) {
+.app-container {
   min-height: 100vh;
   overflow-y: auto;
 }
@@ -131,10 +69,44 @@ body {
   to { transform: rotate(360deg); }
 }
 
-/* Auth Container */
+/* Auth Container - responsiivinen */
 .auth-container {
   width: 100%;
   max-width: 420px;
+}
+
+/* Desktop Auth */
+@media (min-width: 769px) {
+  .auth-container {
+    max-width: 500px;
+  }
+  
+  .login-box,
+  .user-info {
+    padding: 3rem;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+  }
+  
+  .login-box h1 {
+    font-size: 3rem;
+  }
+
+  /* ProfileSetup Desktop */
+  .profile-setup-container {
+    max-width: 600px;
+  }
+
+  .profile-form {
+    padding: 3rem;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+  }
+
+  /* Matchmaker Desktop */
+  .matchmaker-container {
+    max-width: 700px;
+  }
 }
 
 .login-box {
@@ -375,51 +347,6 @@ body {
   line-height: 1.4;
 }
 
-/* Footer */
-.app-footer {
-  background: #000000;
-  border-top: 1px solid #333333;
-  padding: 1.5rem 0;
-  margin-top: auto;
-}
-
-.footer-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1rem;
-  text-align: center;
-}
-
-.footer-content p {
-  color: #888888;
-  font-size: 0.9rem;
-  margin-bottom: 1rem;
-}
-
-.footer-links {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.footer-links a {
-  color: #cccccc;
-  text-decoration: none;
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.footer-links a:hover {
-  color: #ffffff;
-}
-
-.footer-links span {
-  color: #666666;
-}
-
 /* Matchmaker Specific Styles */
 .matchmaker-container {
   width: 100%;
@@ -621,12 +548,13 @@ html, body {
   .chat-container {
     position: relative;
     width: 100%;
-    max-width: min(600px, 90vw); /* Leve���mpi mutta ei liian leveä */
-    height: 700px; /* Korkeampi desktop-versio */
+    max-width: min(800px, 95vw); /* Leveämpi desktop-versio */
+    height: min(800px, 90vh); /* Korkeampi mutta ei yli näytön */
     border: 1px solid #333333;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    border-radius: 12px; /* Pyöristetyt kulmat desktopissa */
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+    border-radius: 16px; /* Isommat pyöristetyt kulmat */
     overflow: hidden;
+    margin: 2rem auto; /* Keskitetty margin */
     /* Override mobile fixed positioning */
     top: auto;
     left: auto;
@@ -634,26 +562,34 @@ html, body {
   }
 
   .app-container {
-    padding: 2rem;
+    padding: 1rem;
     justify-content: center;
+    align-items: center;
   }
 
   /* Keskitä chat desktopissa */
-  .app-main {
+  .app-main.chat-main {
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: calc(100vh - 200px);
+    min-height: 100vh;
+    padding: 2rem 1rem;
   }
 
   /* Desktop chat input adjustments */
   .chat-input-container {
-    padding: 1.2rem 1.5rem;
+    padding: 1.5rem 2rem;
   }
 
   .chat-input {
-    padding: 1rem 1.5rem;
-    font-size: 1rem;
+    padding: 1.2rem 1.8rem;
+    font-size: 1.1rem;
+  }
+
+  .send-button {
+    width: 60px;
+    height: 60px;
+    font-size: 1.5rem;
   }
 
   .chat-send-btn {
@@ -667,10 +603,42 @@ html, body {
   }
 }
 
-/* Suuret näytöt - rajoita leveyttä */
+/* Suuret näytöt - parempi skaalaus */
 @media (min-width: 1200px) {
   .chat-container {
-    max-width: 500px; /* Ei liian leveä isoilla näytöillä */
+    max-width: 900px; /* Suurempi suurille näytöille */
+    height: min(850px, 85vh);
+  }
+
+  .app-main.chat-main {
+    padding: 3rem 2rem;
+  }
+}
+
+/* Erittäin suuret näytöt */
+@media (min-width: 1600px) {
+  .chat-container {
+    max-width: 1100px;
+    height: min(900px, 80vh);
+  }
+
+  .app-main.chat-main {
+    padding: 4rem 3rem;
+  }
+
+  .chat-input-container {
+    padding: 2rem 2.5rem;
+  }
+
+  .chat-input {
+    padding: 1.5rem 2rem;
+    font-size: 1.2rem;
+  }
+
+  .send-button {
+    width: 70px;
+    height: 70px;
+    font-size: 1.8rem;
   }
 }
 

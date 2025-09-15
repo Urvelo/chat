@@ -36,12 +36,11 @@ const Auth = ({ user, setUser }) => {
         createdAt: new Date().toISOString()
       };
 
-      console.log("💾 Tallennetaan käyttäjä:", newUser);
+      console.log("💾 Luodaan käyttäjä (ei tallenneta):", newUser);
       
-      // Tallenna localStorage
-      localStorage.setItem('chatnest-user', JSON.stringify(newUser));
+      // EI tallenneta localStorage:iin - aina kysytään uudestaan
       
-      console.log("✅ Käyttäjä tallennettu, asetetaan tilaan");
+      console.log("✅ Käyttäjä luotu, asetetaan tilaan");
       
       // Aseta käyttäjä - tämä laukaisee siirtymän App.jsx:ssä
       setUser(newUser);
@@ -56,8 +55,7 @@ const Auth = ({ user, setUser }) => {
   };
 
   const handleSignOut = () => {
-    localStorage.removeItem('chatnest-user');
-    localStorage.removeItem('chatnest-profile');
+    // Poistetaan vain muistista - ei localStorage:ia
     setUser(null);
   };
 

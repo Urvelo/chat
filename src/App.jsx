@@ -13,50 +13,14 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState('auth'); // auth, profile, matchmaker, chat
 
-  // Lataa käyttäjätiedot localStorage:sta sivun latautuessa
+  // Lataa käyttäjätiedot localStorage:sta sivun latautuessa - POISTETTU
   useEffect(() => {
-    console.log("🔄 Ladataan käyttäjätiedot...");
+    console.log("🔄 Aloitetaan tyhjältä - ei tallennettuja tietoja");
     
-    const savedUser = localStorage.getItem('chatnest-user');
-    const savedProfile = localStorage.getItem('chatnest-profile');
-    
-    console.log("📱 Tallennettu käyttäjä:", !!savedUser);
-    console.log("👤 Tallennettu profiili:", !!savedProfile);
-    
-    if (savedUser) {
-      try {
-        const parsedUser = JSON.parse(savedUser);
-        console.log("✅ Käyttäjä löytyi:", parsedUser.displayName);
-        setUser(parsedUser);
-        
-        if (savedProfile) {
-          try {
-            const parsedProfile = JSON.parse(savedProfile);
-            console.log("✅ Profiili löytyi, siirtymä matchmakeriin");
-            setProfile(parsedProfile);
-            setCurrentView('matchmaker');
-          } catch (error) {
-            console.error("❌ Virhe profiilin parseamisessa:", error);
-            localStorage.removeItem('chatnest-profile');
-            setCurrentView('profile');
-          }
-        } else {
-          console.log("📝 Profiilia ei löydy, siirtymä profiilisettingiin");
-          setCurrentView('profile');
-        }
-      } catch (error) {
-        console.error("❌ Virhe käyttäjän parseamisessa:", error);
-        localStorage.removeItem('chatnest-user');
-        localStorage.removeItem('chatnest-profile');
-        setCurrentView('auth');
-      }
-    } else {
-      console.log("🔐 Käyttäjää ei löydy, näytetään kirjautuminen");
-      setCurrentView('auth');
-    }
-    
+    // Aina näytetään kirjautuminen - ei tallenneta tietoja
+    setCurrentView('auth');
     setLoading(false);
-    console.log("✅ Lataus valmis");
+    console.log("✅ Lataus valmis - kirjautuminen vaaditaan");
   }, []);
 
   // Kun käyttäjä asetetaan (kirjautuminen), siirry profiilisetupiin
@@ -113,27 +77,11 @@ function App() {
   }
 
   return (
-    <div className={`app-container ${currentView === 'chat' ? 'chat-mode' : ''}`}>
-      {/* Header - piilossa chat-tilassa */}
-      {currentView !== 'chat' && (
-        <header className="app-header">
-          <div className="header-content">
-            <h1 className="app-title">🔥 ChatNest</h1>
-            <div className="header-info">
-              {user && (
-                <div className="user-badge">
-                  <div className="user-avatar">👤</div>
-                  <span>{user.displayName}</span>
-                  <span className="age-badge">{user.age}v</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </header>
-      )}
-
+    <div className="app-container">
+      {/* Header ja footer poistettu kokonaan */}
+      
       {/* Pääsisältö */}
-      <main className={`app-main ${currentView === 'chat' ? 'chat-main' : ''}`}>
+      <main className="app-main">
         {currentView === 'auth' && (
           <Auth user={user} setUser={setUser} />
         )}
@@ -163,22 +111,6 @@ function App() {
           />
         )}
       </main>
-
-      {/* Footer - piilossa chat-tilassa */}
-      {currentView !== 'chat' && (
-        <footer className="app-footer">
-          <div className="footer-content">
-            <p>🛡️ Turvallinen chat • 🔒 Yksityisyys suojattu • 🚩 Raportoi väärinkäyttö</p>
-            <div className="footer-links">
-              <a href="#" onClick={(e) => e.preventDefault()}>Käyttöehdot</a>
-              <span>•</span>
-              <a href="#" onClick={(e) => e.preventDefault()}>Tietosuoja</a>
-              <span>•</span>
-              <a href="#" onClick={(e) => e.preventDefault()}>Tuki</a>
-            </div>
-          </div>
-        </footer>
-      )}
     </div>
   );
 }

@@ -10,51 +10,15 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  // Tarkista onko profiili jo olemassa
+  // Tarkista onko profiili jo olemassa - POISTETTU localStorage
   useEffect(() => {
     const checkExistingProfile = async () => {
       try {
-        console.log("📋 Tarkistetaan olemassa oleva profiili käyttäjälle:", user?.displayName);
+        console.log("📋 Aina luodaan uusi profiili käyttäjälle:", user?.displayName);
         
-        // Tarkista localStorage:sta ensin
-        const savedProfile = localStorage.getItem('chatnest-profile');
-        if (savedProfile) {
-          const userData = JSON.parse(savedProfile);
-          
-          // Jos vanhassa profiilissa ei ole ageGroup:ia, lisää se
-          if (!userData.ageGroup) {
-            console.log("🔄 Vanhan profiilin päivitys - lisätään ageGroup");
-            userData.ageGroup = '15-20';
-            localStorage.setItem('chatnest-profile', JSON.stringify(userData));
-          }
-          
-          console.log("✅ localStorage profiili ladattu, ohitetaan setup");
-          setProfile(userData);
-          onProfileComplete(userData);
-          return;
-        }
-
-        console.log("📡 Tarkistetaan Firestore...");
-        const docRef = doc(db, 'profiles', user.uid);
-        const docSnap = await getDoc(docRef);
+        // EI tarkisteta localStorage:a tai Firestore:a - aina uusi profiili
+        console.log("🆕 Uusi sessio - näytetään profiilisetup");
         
-        if (docSnap.exists()) {
-          const userData = docSnap.data();
-          
-          // Jos vanhassa profiilissa ei ole ageGroup:ia, lisää se
-          if (!userData.ageGroup) {
-            console.log("Firestore profiilin päivitys - lisätään ageGroup");
-            userData.ageGroup = '15-20';
-            // Päivitä sekä Firestore että localStorage
-            await setDoc(docRef, userData);
-            localStorage.setItem('chatnest-profile', JSON.stringify(userData));
-          }
-          
-          console.log("Firestore profiili ladattu:", userData);
-          setProfile(userData);
-          localStorage.setItem('chatnest-profile', JSON.stringify(userData));
-          onProfileComplete(userData);
-        }
       } catch (error) {
         console.error('Virhe profiilin tarkistuksessa:', error);
         setError('Profiilin lataus epäonnistui.');
@@ -106,9 +70,8 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
 
       console.log("💾 Tallennettava profiilidata:", profileData);
 
-      // Tallenna Firestoreen ja localStorage
+      // Tallenna vain Firestoreen - EI localStorage:iin
       await setDoc(doc(db, 'profiles', user.uid), profileData);
-      localStorage.setItem('chatnest-profile', JSON.stringify(profileData));
       
       console.log("✅ Profiili tallennettu, kutsutaan onProfileComplete");
       onProfileComplete(profileData);
