@@ -55,12 +55,12 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
           {
             uid: user.uid,
             displayName: profile.displayName,
-            joinedAt: serverTimestamp()
+            joinedAt: Date.now()
           },
           {
             uid: otherUser.uid,
-            displayName: otherUser.displayName,
-            joinedAt: serverTimestamp()
+            displayName: otherUser.name,
+            joinedAt: Date.now()
           }
         ],
         ageGroup: profile.ageGroup,
