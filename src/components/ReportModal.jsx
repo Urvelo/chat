@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase';
+import { collection, addDoc, serverTimestamp, db } from '../firebase';
 
 const ReportModal = ({ roomId, reportedUser, onClose, onReportSent }) => {
   const [reason, setReason] = useState('');

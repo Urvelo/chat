@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { doc, setDoc, getDoc, db } from '../firebase';
 import { getCachedFingerprint } from '../utils/fingerprint';
 
 const ProfileSetup = ({ user, onProfileComplete }) => {

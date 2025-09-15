@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase';
+import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, db } from '../firebase';
 import { v4 as uuidv4 } from 'uuid';
 
 const Matchmaker = ({ user, profile, onRoomJoined }) => {

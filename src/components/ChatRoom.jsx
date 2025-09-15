@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, db } from '../firebase';
 import ReportModal from './ReportModal';
 
 const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
