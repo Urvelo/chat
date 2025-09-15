@@ -18,6 +18,15 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
         const savedProfile = localStorage.getItem('chatnest-profile');
         if (savedProfile) {
           const userData = JSON.parse(savedProfile);
+          
+          // Jos vanhassa profiilissa ei ole ageGroup:ia, lisää se
+          if (!userData.ageGroup) {
+            console.log("Vanhan profiilin päivitys - lisätään ageGroup");
+            userData.ageGroup = '15-20';
+            localStorage.setItem('chatnest-profile', JSON.stringify(userData));
+          }
+          
+          console.log("localStorage profiili ladattu:", userData);
           setProfile(userData);
           onProfileComplete(userData);
           return;
@@ -29,6 +38,17 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
         
         if (docSnap.exists()) {
           const userData = docSnap.data();
+          
+          // Jos vanhassa profiilissa ei ole ageGroup:ia, lisää se
+          if (!userData.ageGroup) {
+            console.log("Firestore profiilin päivitys - lisätään ageGroup");
+            userData.ageGroup = '15-20';
+            // Päivitä sekä Firestore että localStorage
+            await setDoc(docRef, userData);
+            localStorage.setItem('chatnest-profile', JSON.stringify(userData));
+          }
+          
+          console.log("Firestore profiili ladattu:", userData);
           setProfile(userData);
           localStorage.setItem('chatnest-profile', JSON.stringify(userData));
           onProfileComplete(userData);

@@ -88,7 +88,12 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
     try {
       // Varmista että profile on validi
       if (!profile?.ageGroup || !profile?.displayName) {
-        console.error('Profile puutteellinen:', profile);
+        console.error('Profile puutteellinen:', {
+          profile: profile,
+          ageGroup: profile?.ageGroup,
+          displayName: profile?.displayName,
+          keys: Object.keys(profile || {})
+        });
         setStatus('Virhe: Profiili puutteellinen');
         return;
       }
