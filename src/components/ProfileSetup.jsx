@@ -107,7 +107,7 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
         {error && <div className="error-message">{error}</div>}
 
         <form onSubmit={handleSubmit}>
-          <div className="form-group checkbox-group">
+          <div className="form-group checkbox-group large-checkbox">
             <label>
               <input
                 type="checkbox"
@@ -121,13 +121,60 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
           </div>
 
           <div className="terms-summary">
-            <h3>📋 Käyttöehdot lyhyesti:</h3>
-            <ul>
-              <li>🚫 Ei häirintää, kiusaamista tai sopimattomia viestejä</li>
-              <li>🔐 Henkilötietoja ei jaeta muille käyttäjille</li>
-              <li>⚠️ Väärinkäyttö johtaa pysyvään banniin</li>
-              <li>📝 Viestit tallennetaan turvallisuussyistä</li>
-            </ul>
+            <h3>📋 Käyttöehdot ja säännöt:</h3>
+            <div className="terms-content">
+              <div className="terms-section">
+                <h4>🛡️ Turvallisuus ja moderointi</h4>
+                <ul>
+                  <li>Viestit tarkistetaan automaattisesti älykkäällä moderointijärjestelmällä</li>
+                  <li>Sopimattomat viestit estetään tai varoitus annetaan</li>
+                  <li>Järjestelmä ymmärtää kontekstin - asiallinen terveyskasvatus sallittu</li>
+                  <li>Häirintä ja uhkailu johtavat välittömään banniin</li>
+                </ul>
+              </div>
+              
+              <div className="terms-section">
+                <h4>🚫 Kiellettyä sisältöä</h4>
+                <ul>
+                  <li>Seksuaalinen häirintä tai sopimaton sisältö</li>
+                  <li>Väkivalta, uhkailu tai kiusaaminen</li>
+                  <li>Henkilötietojen jakaminen (osoite, puhelinnumero, yms.)</li>
+                  <li>Huumeet, alkoholi tai muu laiton toiminta</li>
+                  <li>Rasismi, syrjintä tai vihapuhe</li>
+                </ul>
+              </div>
+              
+              <div className="terms-section">
+                <h4>✅ Sallittua ja toivottua</h4>
+                <ul>
+                  <li>Ystävällinen ja turvallinen keskustelu</li>
+                  <li>Harrastuksista ja kiinnostuksista puhuminen</li>
+                  <li>Asiallinen terveyskasvatus ja kysymykset</li>
+                  <li>Tuki ja neuvonanto vaikeissa tilanteissa</li>
+                  <li>Luovuus ja huumori (sopivissa rajoissa)</li>
+                </ul>
+              </div>
+              
+              <div className="terms-section">
+                <h4>🔐 Yksityisyys ja tietosuoja</h4>
+                <ul>
+                  <li>Viestit tallennetaan turvallisuus- ja moderointitarkoituksiin</li>
+                  <li>Henkilötietojasi ei jaeta kolmansille osapuolille</li>
+                  <li>Voit pyytää tietojesi poistamista ottamalla yhteyttä</li>
+                  <li>Chat-parit valitaan satunnaisesti ikäryhmän mukaan</li>
+                </ul>
+              </div>
+              
+              <div className="terms-section warning">
+                <h4>⚠️ Seuraamukset</h4>
+                <ul>
+                  <li>Ensimmäinen rikkomus: varoitus ja ohjeistus</li>
+                  <li>Toistuva väärinkäyttö: tilapäinen esto (1-7 päivää)</li>
+                  <li>Vakava häirintä tai uhkailu: pysyvä banni</li>
+                  <li>Laiton toiminta ilmoitetaan viranomaisille</li>
+                </ul>
+              </div>
+            </div>
           </div>
 
           <button 
