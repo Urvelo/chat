@@ -40,6 +40,31 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
     return unsubscribe;
   }, [profile?.ageGroup, user.uid, isSearching]);
 
+  // Kuuntele huoneita joissa käyttäjä on mukana
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const q = query(
+      collection(db, 'rooms'),
+      where('userIds', 'array-contains', user.uid)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      snapshot.docs.forEach(doc => {
+        const roomData = { id: doc.id, ...doc.data() };
+        
+        if (isSearching) {
+          console.log("Löytyi huone jossa olen mukana:", roomData);
+          setIsSearching(false);
+          setStatus('matched');
+          onRoomJoined(doc.id, roomData);
+        }
+      });
+    });
+
+    return unsubscribe;
+  }, [user?.uid, isSearching, onRoomJoined]);
+
   // Luo chat-huone toisen käyttäjän kanssa
   const createChatRoom = async (otherUser) => {
     try {
@@ -51,6 +76,7 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
       // Luo huone Firestoreen
       const roomData = {
         id: roomId,
+        userIds: [user.uid, otherUser.uid], // Yksinkertainen array uid:sta
         users: [
           {
             uid: user.uid,
@@ -69,14 +95,18 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
         type: 'text' // vain tekstichat, ei videota
       };
 
-      await addDoc(collection(db, 'rooms'), roomData);
+      const docRef = await addDoc(collection(db, 'rooms'), roomData);
+      
+      // Käytä todellista document ID:tä
+      const actualRoomId = docRef.id;
+      const actualRoomData = { ...roomData, id: actualRoomId };
       
       // Poista molemmat käyttäjät waiting-listasta
       await deleteDoc(doc(db, 'waiting', user.uid));
       await deleteDoc(doc(db, 'waiting', otherUser.id));
       
       // Siirry chat-huoneeseen
-      onRoomJoined(roomId, roomData);
+      onRoomJoined(actualRoomId, actualRoomData);
       
     } catch (error) {
       console.error('Virhe huoneen luonnissa:', error);
