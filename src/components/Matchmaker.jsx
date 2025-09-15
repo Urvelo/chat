@@ -97,12 +97,12 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
       const waitingRef = doc(db, 'waiting', user.uid);
       await setDoc(waitingRef, {
         uid: user.uid,
-        name: user.name,
-        ageGroup: user.ageGroup,
+        name: profile.displayName,
+        ageGroup: profile.ageGroup,
         timestamp: Date.now()
       });
 
-      console.log("Lisätty waiting listaan:", user.uid);
+      console.log("Lisätty waiting listaan:", user.uid, "nimi:", profile.displayName);
       
       // Kuuntele waiting-listaa ja etsi match
       const q = query(
@@ -193,7 +193,7 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
               onClick={startSearching}
               className="start-search-btn"
             >
-              🚀 Aloita haku
+              🚀 ALOITA HAKU
             </button>
             
             <div className="info-box">
