@@ -207,7 +207,7 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
                 required
               />
               <span className="checkmark"></span>
-              Hyväksyn <a href="/terms" target="_blank" rel="noopener noreferrer">käyttöehdot ja tietosuojakäytännön</a>
+              Hyväksyn käyttöehdot
             </label>
           </div>
 
