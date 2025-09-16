@@ -91,6 +91,18 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
     return () => clearInterval(interval);
   }, []);
 
+  // Cleanup musiikki kun komponentti poistuu
+  useEffect(() => {
+    return () => {
+      // Pysäytä musiikki kun poistutaan Matchmaker-komponentista
+      if (window.backgroundMusic) {
+        window.backgroundMusic.pause();
+        window.backgroundMusic.currentTime = 0;
+        window.backgroundMusic = null;
+      }
+    };
+  }, []);
+
   // Kuuntele olemassa olevia huoneita joissa käyttäjä on mukana - korjattu versio
   useEffect(() => {
     if (!user?.uid || !isSearching) return;
@@ -413,10 +425,30 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
                   checked={localStorage.getItem("playMusic") === "true"}
                   onChange={(e) => {
                     localStorage.setItem("playMusic", e.target.checked);
+                    
+                    // Aloita/lopeta musiikki heti
+                    if (e.target.checked) {
+                      // Luo audio-elementti ja aloita toisto
+                      const audio = new Audio('/rauhaisa_piano.mp3');
+                      audio.volume = 0.15;
+                      audio.loop = true;
+                      audio.play().catch(error => {
+                        console.log("Automaattinen musiikki estetty selaimessa:", error);
+                      });
+                      // Tallenna referenssi globaalisti
+                      window.backgroundMusic = audio;
+                    } else {
+                      // Pysäytä musiikki
+                      if (window.backgroundMusic) {
+                        window.backgroundMusic.pause();
+                        window.backgroundMusic.currentTime = 0;
+                        window.backgroundMusic = null;
+                      }
+                    }
                   }}
                 />
                 <span className="checkmark"></span>
-                🎵 Soita rauhallista pianomusiikkia chatissa
+                🎵 Soita rauhallista pianomusiikkia
               </label>
             </div>
             

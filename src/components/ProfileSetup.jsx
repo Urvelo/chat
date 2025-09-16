@@ -102,7 +102,7 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
     <div className="profile-setup-container">
       <div className="profile-form">
         <h2>� Käyttöehdot</h2>
-        <p>Hyväksy käyttöehdot aloittaaksesi chatit.</p>
+
 
         {error && <div className="error-message">{error}</div>}
 
@@ -169,7 +169,7 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
                 <h4>⚠️ Seuraamukset</h4>
                 <ul>
                   <li>Varoitus annetaan epäasiallisesta sisällöstä</li>
-                  <li>Toistuvista ilmoituksista (esim. 3 kpl) seuraa tilin esto</li>
+                  <li>Toistuvista ilmoituksista seuraa tilin esto</li>
                   <li>Vakavissa tapauksissa käyttö estetään välittömästi</li>
                 </ul>
               </div>
