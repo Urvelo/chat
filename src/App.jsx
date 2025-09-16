@@ -3,6 +3,7 @@ import Auth from './components/Auth';
 import ProfileSetup from './components/ProfileSetup';
 import Matchmaker from './components/Matchmaker';
 import ChatRoom from './components/ChatRoom';
+import { cleanupService } from './utils/cleanup';
 import './App.css';
 
 function App() {
@@ -16,6 +17,25 @@ function App() {
   // Lataa käyttäjätiedot localStorage:sta sivun latautuessa - POISTETTU
   useEffect(() => {
     console.log("🔄 Aloitetaan tyhjältä - ei tallennettuja tietoja");
+    
+    // Suorita siivous sovelluksen käynnistyessä (kerran päivässä)
+    const lastCleanup = localStorage.getItem('lastCleanup');
+    const now = Date.now();
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    
+    if (!lastCleanup || (now - parseInt(lastCleanup)) > oneDayMs) {
+      console.log('🧹 Suoritetaan päivittäinen siivous...');
+      cleanupService.performFullCleanup()
+        .then(results => {
+          console.log('✅ Päivittäinen siivous valmis:', results);
+          localStorage.setItem('lastCleanup', now.toString());
+        })
+        .catch(error => {
+          console.error('❌ Päivittäinen siivous epäonnistui:', error);
+        });
+    } else {
+      console.log('ℹ️ Siivous tehty jo tänään, ohitetaan');
+    }
     
     // Aina näytetään kirjautuminen - ei tallenneta tietoja
     setCurrentView('auth');
