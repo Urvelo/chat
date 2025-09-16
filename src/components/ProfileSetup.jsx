@@ -126,10 +126,10 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
               <div className="terms-section">
                 <h4>🛡️ Turvallisuus ja moderointi</h4>
                 <ul>
-                  <li>Viestit tarkistetaan automaattisesti älykkäällä moderointijärjestelmällä</li>
-                  <li>Sopimattomat viestit estetään tai varoitus annetaan</li>
-                  <li>Järjestelmä ymmärtää kontekstin - asiallinen terveyskasvatus sallittu</li>
-                  <li>Häirintä ja uhkailu johtavat välittömään banniin</li>
+                  <li>Käytämme automaattista moderointia epäasiallisen sisällön rajaamiseen</li>
+                  <li>Sopimaton sisältö voidaan estää tai siitä voidaan varoittaa</li>
+                  <li>Asiallinen, tiedonhaun tai terveyskasvatuksen konteksti on sallittu</li>
+                  <li>Häirintä ja uhkailu johtavat tilin estoon</li>
                 </ul>
               </div>
               
@@ -158,20 +158,19 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
               <div className="terms-section">
                 <h4>🔐 Yksityisyys ja tietosuoja</h4>
                 <ul>
-                  <li>Viestit tallennetaan turvallisuus- ja moderointitarkoituksiin</li>
-                  <li>Henkilötietojasi ei jaeta kolmansille osapuolille</li>
-                  <li>Voit pyytää tietojesi poistamista ottamalla yhteyttä</li>
-                  <li>Chat-parit valitaan satunnaisesti ikäryhmän mukaan</li>
+                  <li>Emme tallenna keskusteluja palvelimelle. Huone poistetaan, kun poistut.</li>
+                  <li>Profiilitiedot (kuten nimimerkki ja ikäryhmä) tarvitaan paritukseen</li>
+                  <li>Henkilötietoja ei myydä tai jaeta ulkopuolisille</li>
+                  <li>Voit lopettaa käytön milloin tahansa</li>
                 </ul>
               </div>
               
               <div className="terms-section warning">
                 <h4>⚠️ Seuraamukset</h4>
                 <ul>
-                  <li>Ensimmäinen rikkomus: varoitus ja ohjeistus</li>
-                  <li>Toistuva väärinkäyttö: tilapäinen esto (1-7 päivää)</li>
-                  <li>Vakava häirintä tai uhkailu: pysyvä banni</li>
-                  <li>Laiton toiminta ilmoitetaan viranomaisille</li>
+                  <li>Varoitus annetaan epäasiallisesta sisällöstä</li>
+                  <li>Toistuvista ilmoituksista (esim. 3 kpl) seuraa tilin esto</li>
+                  <li>Vakavissa tapauksissa käyttö estetään välittömästi</li>
                 </ul>
               </div>
             </div>
