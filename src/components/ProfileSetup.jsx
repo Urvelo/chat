@@ -127,7 +127,7 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
                 <h4>🛡️ Turvallisuus ja moderointi</h4>
                 <ul>
                   <li>Käytämme automaattista moderointia epäasiallisen sisällön rajaamiseen</li>
-                  <li>Sopimaton sisältö voidaan estää tai siitä voidaan varoittaa</li>
+                  <li>Sopimaton sisältö estetään</li>
                   <li>Asiallinen, tiedonhaun tai terveyskasvatuksen konteksti on sallittu</li>
                   <li>Häirintä ja uhkailu johtavat tilin estoon</li>
                 </ul>
@@ -149,9 +149,9 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
                 <ul>
                   <li>Ystävällinen ja turvallinen keskustelu</li>
                   <li>Harrastuksista ja kiinnostuksista puhuminen</li>
-                  <li>Asiallinen terveyskasvatus ja kysymykset</li>
+                  <li>Asialliset kysymykset</li>
                   <li>Tuki ja neuvonanto vaikeissa tilanteissa</li>
-                  <li>Luovuus ja huumori (sopivissa rajoissa)</li>
+                  <li>Huumori</li>
                 </ul>
               </div>
               
