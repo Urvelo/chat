@@ -210,27 +210,36 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
   const handleInputFocus = () => {
     // Nopea reagointi mobiilissa
     if (window.innerWidth <= 768) {
-      // Piilota header tilapäisesti lisätilaa varten
-      const header = document.querySelector('.chat-header');
-      if (header) {
-        header.style.transform = 'translateY(-100%)';
-        header.style.transition = 'transform 0.2s ease';
-      }
-      
-      // Scroll bottom after keyboard shows
+      // Scroll bottom after keyboard shows - korjattu fixed input:lle
       setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 200);
+        // Scrollaa viestialue näkyviin, ottaen huomioon fixed input
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'end' 
+          });
+        }
+        
+        // Varmista että sivu on scrollattu tarpeeksi ylös
+        window.scrollTo({ 
+          top: Math.max(0, document.body.scrollHeight - window.innerHeight + 120), 
+          behavior: 'smooth' 
+        });
+      }, 300); // Lisää aikaa näppäimistön avautumiselle
     }
   };
 
   const handleInputBlur = () => {
-    // Palauta header
+    // Palauta normaali scrollaus kun näppäimistö sulkeutuu
     if (window.innerWidth <= 768) {
-      const header = document.querySelector('.chat-header');
-      if (header) {
-        header.style.transform = 'translateY(0)';
-      }
+      setTimeout(() => {
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'end' 
+          });
+        }
+      }, 100);
     }
   };
 
