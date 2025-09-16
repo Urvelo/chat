@@ -328,70 +328,35 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
           console.log('📊 Kategoriat:', result.categories);
           console.log('📈 Pisteet:', result.category_scores);
           
-          // ÄÄRIMMÄISEN HERKÄT KRITEERIT - estää kaiken epäilyttävän
+          // ULTRA-TIUKKA: Estää KAIKEN mikä saa pisteitä
           const scores = result.category_scores;
           let blocked = false;
           let reason = [];
           
-          // SEKSUAALINEN sisältö: raja 0.01 (1% = esto)
-          if (scores.sexual > 0.01) {
-            blocked = true;
-            reason.push(`seksuaalinen sisältö (${(scores.sexual * 100).toFixed(1)}%)`);
-          }
+          // Tarkista kaikki kategoriat - jos MIKÄ TAHANSA yli 0
+          const categories = [
+            { name: 'seksuaalinen sisältö', key: 'sexual', threshold: 0 },
+            { name: 'häirintä', key: 'harassment', threshold: 0 },
+            { name: 'väkivalta', key: 'violence', threshold: 0 },
+            { name: 'vihapuhe', key: 'hate', threshold: 0 },
+            { name: 'itsensä vahingoittaminen', key: 'self-harm', threshold: 0 },
+            { name: 'uhkaava häirintä', key: 'harassment/threatening', threshold: 0 },
+            { name: 'uhkaava vihapuhe', key: 'hate/threatening', threshold: 0 },
+            { name: 'graafinen väkivalta', key: 'violence/graphic', threshold: 0 },
+            { name: 'itsensä vahingoittamisen ohjeet', key: 'self-harm/instructions', threshold: 0 },
+            { name: 'itsensä vahingoittamisen aikomus', key: 'self-harm/intent', threshold: 0 }
+          ];
           
-          // HÄIRINTÄ: raja 0.005 (0.5% = esto)
-          if (scores.harassment > 0.005) {
-            blocked = true;
-            reason.push(`häirintä (${(scores.harassment * 100).toFixed(1)}%)`);
-          }
+          categories.forEach(category => {
+            const score = scores[category.key] || 0;
+            if (score > category.threshold) {
+              blocked = true;
+              reason.push(`${category.name} (${(score * 100).toFixed(3)}%)`);
+            }
+          });
           
-          // VÄKIVALTA: raja 0.005 (0.5% = esto)
-          if (scores.violence > 0.005) {
-            blocked = true;
-            reason.push(`väkivalta (${(scores.violence * 100).toFixed(1)}%)`);
-          }
-          
-          // ITSENSÄ VAHINGOITTAMINEN: raja 0.005 (0.5% = esto)
-          if (scores['self-harm'] > 0.005) {
-            blocked = true;
-            reason.push(`itsensä vahingoittaminen (${(scores['self-harm'] * 100).toFixed(1)}%)`);
-          }
-          
-          // VIHAPUHE: raja 0.005 (0.5% = esto)
-          if (scores.hate > 0.005) {
-            blocked = true;
-            reason.push(`vihapuhe (${(scores.hate * 100).toFixed(1)}%)`);
-          }
-          
-          // HÄIRINTÄ/UHKAILU: raja 0.001 (0.1% = esto)
-          if (scores['harassment/threatening'] > 0.001) {
-            blocked = true;
-            reason.push(`uhkaava häirintä (${(scores['harassment/threatening'] * 100).toFixed(1)}%)`);
-          }
-          
-          // VIHAPUHE/UHKAILU: raja 0.001 (0.1% = esto)
-          if (scores['hate/threatening'] > 0.001) {
-            blocked = true;
-            reason.push(`uhkaava vihapuhe (${(scores['hate/threatening'] * 100).toFixed(1)}%)`);
-          }
-          
-          // VÄKIVALTA/GRAAFINEN: raja 0.001 (0.1% = esto)
-          if (scores['violence/graphic'] > 0.001) {
-            blocked = true;
-            reason.push(`graafinen väkivalta (${(scores['violence/graphic'] * 100).toFixed(1)}%)`);
-          }
-          
-          // ITSENSÄ VAHINGOITTAMINEN/OHJEET: raja 0.001 (0.1% = esto)
-          if (scores['self-harm/instructions'] > 0.001) {
-            blocked = true;
-            reason.push(`itsensä vahingoittamisen ohjeet (${(scores['self-harm/instructions'] * 100).toFixed(1)}%)`);
-          }
-          
-          // ITSENSÄ VAHINGOITTAMINEN/AIKOMUS: raja 0.001 (0.1% = esto)
-          if (scores['self-harm/intent'] > 0.001) {
-            blocked = true;
-            reason.push(`itsensä vahingoittamisen aikomus (${(scores['self-harm/intent'] * 100).toFixed(1)}%)`);
-          }
+          console.log('🔍 Kaikki pisteet:', Object.entries(scores).map(([key, value]) => 
+            `${key}: ${(value * 100).toFixed(3)}%`).join(', '));
           
           // Jos ylittää jonkin rajan tai alkuperäinen flagged
           if (blocked || result.flagged) {
