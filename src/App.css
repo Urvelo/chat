@@ -824,6 +824,13 @@ html, body {
   /* Desktop chat input adjustments */
   .chat-input-container {
     padding: 1.5rem 2rem;
+    /* Seuraa chat-containerin kokoa desktopissa */
+    position: relative;
+    bottom: auto;
+    left: auto;
+    right: auto;
+    width: 100%;
+    max-width: none;
   }
 
   .chat-input {

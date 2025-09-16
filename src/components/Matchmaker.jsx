@@ -425,7 +425,7 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
         
         {/* Aktiivisten käyttäjien näyttö */}
         <div className="user-stats">
-          <p>👥 Aktiivisia käyttäjiä: <strong>{activeUsersCount}</strong></p>
+          <p>👥 Käyttäjät sivustolla: <strong>{activeUsersCount}</strong></p>
           <button 
             onClick={() => setShowFeedbackModal(true)} 
             className="feedback-link-btn"
