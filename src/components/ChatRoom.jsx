@@ -13,6 +13,8 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
   const [showReportMenu, setShowReportMenu] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const messagesEndRef = useRef(null);
+  const backgroundMusicRef = useRef(null);
+  const joinSoundRef = useRef(null);
 
   // Hae toisen käyttäjän tiedot - varmista että roomData ja users on valideja
   const otherUser = roomData?.users?.find?.(u => u?.uid !== user?.uid);
@@ -298,7 +300,35 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     }
   };
 
-  // Ilmoita käyttäjä (porrastettu bänni: 3 ilmoitusta = temp bänni, 3 temp bänniä = ikuinen)
+  // Taustamusiikki ja ääniefektit
+  useEffect(() => {
+    const playMusic = localStorage.getItem("playMusic") === "true";
+    
+    if (playMusic && backgroundMusicRef.current) {
+      backgroundMusicRef.current.volume = 0.15;
+      backgroundMusicRef.current.play().catch(error => {
+        console.log("Automaattinen musiikki estetty selaimessa:", error);
+      });
+    }
+    
+    // Yhdistymisääni kun huone on valmis
+    if (roomReady && joinSoundRef.current) {
+      joinSoundRef.current.volume = 0.3;
+      joinSoundRef.current.play().catch(error => {
+        console.log("Yhdistymisääni estetty selaimessa:", error);
+      });
+    }
+    
+    // Cleanup: pysäytä musiikki kun komponentti poistetaan
+    return () => {
+      if (backgroundMusicRef.current) {
+        backgroundMusicRef.current.pause();
+        backgroundMusicRef.current.currentTime = 0;
+      }
+    };
+  }, [roomReady]); // Suorita kun roomReady muuttuu
+
+  // Ilmoita käyttäjä (porrastettu bänni: 4 ilmoitusta = temp bänni, 3 temp bänniä = ikuinen)
   const reportUser = async () => {
     try {
       if (!otherUser?.uid) {
@@ -318,26 +348,38 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       }
       
       const currentProfile = profileSnap.data();
-      const currentReports = currentProfile.reports || 0;
+      const reportersList = currentProfile.reportersList || [];
+      
+      // Tarkista onko tämä käyttäjä jo ilmoittanut
+      if (reportersList.includes(user.uid)) {
+        console.log("Käyttäjä on jo ilmoittanut tästä henkilöstä");
+        setShowReportMenu(false);
+        return;
+      }
+      
       const banHistory = currentProfile.banHistory || [];
-      const newReportCount = currentReports + 1;
+      
+      // Tarkista onko jo ikuisesti bannattu
+      if (currentProfile.banned) {
+        console.log("Käyttäjä on jo bannattu ikuisesti");
+        setShowReportMenu(false);
+        return;
+      }
+      
+      // Lisää tämä käyttäjä ilmoittajien listaan
+      const newReportersList = [...reportersList, user.uid];
+      const newReportCount = newReportersList.length;
       
       let updateData = {
+        reportersList: newReportersList,
         reports: newReportCount,
         lastReported: new Date()
       };
       
-      let alertMessage = '';
       let shouldLeave = false;
       
-      // Tarkista onko jo ikuisesti bannattu
-      if (currentProfile.banned) {
-        alert('Käyttäjä on jo bannattu ikuisesti.');
-        return;
-      }
-      
-      // Jos 3+ ilmoitusta, anna bänni
-      if (newReportCount >= 3) {
+      // Jos 4+ ilmoitusta, anna bänni
+      if (newReportCount >= 4) {
         const tempBanCount = banHistory.filter(ban => ban.type === 'temporary').length;
         
         if (tempBanCount >= 2) {
@@ -352,7 +394,6 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
             reportCount: newReportCount
           }];
           
-          alertMessage = `Käyttäjä on bannattu ikuisesti (${tempBanCount + 1}. väliaikainen bänni). Kiitos ilmoituksesta!`;
           shouldLeave = true;
         } else {
           // Ensimmäinen tai toinen temp-bänni (24h)
@@ -372,33 +413,31 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
             expiresAt: tempBanEnd,
             reportCount: newReportCount
           }];
+          updateData.reportersList = []; // Nollaa ilmoittajat temp-bännin jälkeen
           updateData.reports = 0; // Nollaa ilmoitukset temp-bännin jälkeen
           
-          alertMessage = `Käyttäjä on bannattu 24 tunniksi (${tempBanCount + 1}. väliaikainen bänni). Kiitos ilmoituksesta!`;
           shouldLeave = true;
         }
-      } else {
-        alertMessage = `Käyttäjä ilmoitettu (${newReportCount}/3). Kiitos ilmoituksesta!`;
       }
       
       // Päivitä profiili
       await updateDoc(profileRef, updateData);
-      console.log(`✅ Käyttäjä ilmoitettu (${newReportCount}/3 ilmoitusta)`);
+      console.log(`✅ Käyttäjä ilmoitettu (${newReportCount}/4 ilmoitusta)`);
       
-      alert(alertMessage);
+      // Ei ilmoitusta käyttäjälle - hiljainen toiminto
+      setShowReportMenu(false);
       
       if (shouldLeave) {
         // Poistu huoneesta automaattisesti
         leaveRoom();
-      } else {
-        setShowReportMenu(false);
       }
       
     } catch (error) {
       console.error('❌ Virhe käyttäjän ilmoittamisessa:', error);
-      alert('Ilmoitus epäonnistui. Yritä uudelleen.');
+      setShowReportMenu(false);
     }
   };
+
   const leaveRoom = async () => {
     try {
       console.log("🗑️ Poistetaan chat-huone kokonaan:", roomId);
@@ -541,6 +580,17 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
 
   return (
     <div className="chat-container">
+      {/* Audio-elementit */}
+      <audio ref={backgroundMusicRef} loop>
+        <source src="/rauhaisa_piano.mp3" type="audio/mpeg" />
+        Selaimesi ei tue ääntä.
+      </audio>
+      
+      <audio ref={joinSoundRef}>
+        <source src="/join.mp3" type="audio/mpeg" />
+        Selaimesi ei tue ääntä.
+      </audio>
+      
       {/* WhatsApp/Snapchat-tyylinen header */}
       <div className="chat-header">
         <div className="chat-header-info">

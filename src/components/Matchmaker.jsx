@@ -405,6 +405,21 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
         
         {status === 'idle' && (
           <div className="search-controls">
+            {/* Musiikkivalinta */}
+            <div className="music-option">
+              <label className="music-checkbox">
+                <input 
+                  type="checkbox" 
+                  checked={localStorage.getItem("playMusic") === "true"}
+                  onChange={(e) => {
+                    localStorage.setItem("playMusic", e.target.checked);
+                  }}
+                />
+                <span className="checkmark"></span>
+                🎵 Soita rauhallista pianomusiikkia chatissa
+              </label>
+            </div>
+            
             <button 
               onClick={startSearching}
               className="start-search-btn"
