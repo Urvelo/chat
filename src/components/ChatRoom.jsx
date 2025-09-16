@@ -328,23 +328,23 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
           console.log('📊 Kategoriat:', result.categories);
           console.log('📈 Pisteet:', result.category_scores);
           
-          // TOIMIVAT TIUKAT KRITEERIT - realistiset mutta erittäin herkät
+          // TIUKENNETUT KRITEERIT - estää myös lievemmät tapaukset
           const scores = result.category_scores;
           let blocked = false;
           let reason = [];
           
           // Tarkista kriittiset kategoriat tiukoilla rajoilla
           const categories = [
-            { name: 'seksuaalinen sisältö', key: 'sexual', threshold: 0.3 },
-            { name: 'häirintä', key: 'harassment', threshold: 0.1 },
-            { name: 'väkivalta', key: 'violence', threshold: 0.1 },
-            { name: 'vihapuhe', key: 'hate', threshold: 0.05 },
-            { name: 'itsensä vahingoittaminen', key: 'self-harm', threshold: 0.05 },
-            { name: 'uhkaava häirintä', key: 'harassment/threatening', threshold: 0.01 },
-            { name: 'uhkaava vihapuhe', key: 'hate/threatening', threshold: 0.01 },
-            { name: 'graafinen väkivalta', key: 'violence/graphic', threshold: 0.01 },
-            { name: 'itsensä vahingoittamisen ohjeet', key: 'self-harm/instructions', threshold: 0.01 },
-            { name: 'itsensä vahingoittamisen aikomus', key: 'self-harm/intent', threshold: 0.01 }
+            { name: 'seksuaalinen sisältö', key: 'sexual', threshold: 0.15 },       // 15% (oli 30%)
+            { name: 'häirintä', key: 'harassment', threshold: 0.05 },               // 5% (oli 10%)
+            { name: 'väkivalta', key: 'violence', threshold: 0.05 },                // 5% (oli 10%)
+            { name: 'vihapuhe', key: 'hate', threshold: 0.02 },                     // 2% (oli 5%)
+            { name: 'itsensä vahingoittaminen', key: 'self-harm', threshold: 0.02 }, // 2% (oli 5%)
+            { name: 'uhkaava häirintä', key: 'harassment/threatening', threshold: 0.005 },
+            { name: 'uhkaava vihapuhe', key: 'hate/threatening', threshold: 0.005 },
+            { name: 'graafinen väkivalta', key: 'violence/graphic', threshold: 0.005 },
+            { name: 'itsensä vahingoittamisen ohjeet', key: 'self-harm/instructions', threshold: 0.005 },
+            { name: 'itsensä vahingoittamisen aikomus', key: 'self-harm/intent', threshold: 0.005 }
           ];
           
           categories.forEach(category => {
