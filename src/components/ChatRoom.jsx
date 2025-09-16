@@ -328,35 +328,37 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
           console.log('📊 Kategoriat:', result.categories);
           console.log('📈 Pisteet:', result.category_scores);
           
-          // ULTRA-TIUKKA: Estää KAIKEN mikä saa pisteitä
+          // TOIMIVAT TIUKAT KRITEERIT - realistiset mutta erittäin herkät
           const scores = result.category_scores;
           let blocked = false;
           let reason = [];
           
-          // Tarkista kaikki kategoriat - jos MIKÄ TAHANSA yli 0
+          // Tarkista kriittiset kategoriat tiukoilla rajoilla
           const categories = [
-            { name: 'seksuaalinen sisältö', key: 'sexual', threshold: 0 },
-            { name: 'häirintä', key: 'harassment', threshold: 0 },
-            { name: 'väkivalta', key: 'violence', threshold: 0 },
-            { name: 'vihapuhe', key: 'hate', threshold: 0 },
-            { name: 'itsensä vahingoittaminen', key: 'self-harm', threshold: 0 },
-            { name: 'uhkaava häirintä', key: 'harassment/threatening', threshold: 0 },
-            { name: 'uhkaava vihapuhe', key: 'hate/threatening', threshold: 0 },
-            { name: 'graafinen väkivalta', key: 'violence/graphic', threshold: 0 },
-            { name: 'itsensä vahingoittamisen ohjeet', key: 'self-harm/instructions', threshold: 0 },
-            { name: 'itsensä vahingoittamisen aikomus', key: 'self-harm/intent', threshold: 0 }
+            { name: 'seksuaalinen sisältö', key: 'sexual', threshold: 0.3 },
+            { name: 'häirintä', key: 'harassment', threshold: 0.1 },
+            { name: 'väkivalta', key: 'violence', threshold: 0.1 },
+            { name: 'vihapuhe', key: 'hate', threshold: 0.05 },
+            { name: 'itsensä vahingoittaminen', key: 'self-harm', threshold: 0.05 },
+            { name: 'uhkaava häirintä', key: 'harassment/threatening', threshold: 0.01 },
+            { name: 'uhkaava vihapuhe', key: 'hate/threatening', threshold: 0.01 },
+            { name: 'graafinen väkivalta', key: 'violence/graphic', threshold: 0.01 },
+            { name: 'itsensä vahingoittamisen ohjeet', key: 'self-harm/instructions', threshold: 0.01 },
+            { name: 'itsensä vahingoittamisen aikomus', key: 'self-harm/intent', threshold: 0.01 }
           ];
           
           categories.forEach(category => {
             const score = scores[category.key] || 0;
             if (score > category.threshold) {
               blocked = true;
-              reason.push(`${category.name} (${(score * 100).toFixed(3)}%)`);
+              reason.push(`${category.name} (${(score * 100).toFixed(1)}% > ${(category.threshold * 100).toFixed(1)}%)`);
             }
           });
           
-          console.log('🔍 Kaikki pisteet:', Object.entries(scores).map(([key, value]) => 
-            `${key}: ${(value * 100).toFixed(3)}%`).join(', '));
+          console.log('🔍 Korkeimmat pisteet:', Object.entries(scores)
+            .filter(([key, value]) => value > 0.01)
+            .map(([key, value]) => `${key}: ${(value * 100).toFixed(1)}%`)
+            .join(', '));
           
           // Jos ylittää jonkin rajan tai alkuperäinen flagged
           if (blocked || result.flagged) {
