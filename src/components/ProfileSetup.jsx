@@ -108,19 +108,6 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
         {error && <div className="error-message">{error}</div>}
 
         <form onSubmit={handleSubmit}>
-          <div className="form-group checkbox-group large-checkbox">
-            <label>
-              <input
-                type="checkbox"
-                name="termsAccepted"
-                checked={profile.termsAccepted}
-                onChange={handleInputChange}
-                required
-              />
-              <span>Hyväksyn käyttöehdot ja sitoudun asialliseen käytökseen *</span>
-            </label>
-          </div>
-
           <div className="terms-summary">
             <h3>📋 Käyttöehdot ja säännöt:</h3>
             <div className="terms-content">
@@ -177,8 +164,36 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
             </div>
           </div>
 
+          {/* Musiikkivalinta */}
+          <div className="music-preference">
+            <label className="music-checkbox-simple">
+              <input
+                type="checkbox"
+                name="backgroundMusic"
+                checked={profile.backgroundMusic}
+                onChange={handleInputChange}
+              />
+              <span className="checkmark"></span>
+              Haluatko taustamusiikkia?
+            </label>
+          </div>
+
           {/* Käyttöehtojen hyväksyminen */}
-                    {/* Musiikkivalinta */}
+          <div className="terms-preference">
+            <label className="music-checkbox-simple">
+              <input
+                type="checkbox"
+                name="termsAccepted"
+                checked={profile.termsAccepted}
+                onChange={handleInputChange}
+                required
+              />
+              <span className="checkmark"></span>
+              Hyväksyn käyttöehdot ja sitoudun asialliseen käytökseen *
+            </label>
+          </div>
+
+          {/* Musiikkivalinta */}
           <div className="music-preference">
             <label className="music-checkbox-simple">
               <input
@@ -194,7 +209,7 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
 
           <button 
             type="submit" 
-            disabled={saving}
+            disabled={saving || !profile.termsAccepted}
             className="submit-btn"
           >
             {saving ? 'Tallennetaan...' : '🚀 Aloita chatit!'}
