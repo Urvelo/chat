@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, getDoc, deleteDoc, setDoc, getDocs } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { db, storage } from '../firebase';
+import { db } from '../firebase';
 import { smartModerationService } from '../utils/smart-moderation.js';
 import FeedbackModal from './FeedbackModal';
 
@@ -11,11 +10,9 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
   const [loading, setLoading] = useState(true);
   const [roomReady, setRoomReady] = useState(false);
   const [waitingForOther, setWaitingForOther] = useState(true);
-  const [uploading, setUploading] = useState(false);
   const [showReportMenu, setShowReportMenu] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const messagesEndRef = useRef(null);
-  const fileInputRef = useRef(null);
 
   // Hae toisen käyttäjän tiedot - varmista että roomData ja users on valideja
   const otherUser = roomData?.users?.find?.(u => u?.uid !== user?.uid);
@@ -235,116 +232,6 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     }
   };
 
-  // Lähetä tiedosto/kuva
-  const handleFileUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file || !roomReady) return;
-
-    // Tarkista tiedostokoko (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      alert('Tiedosto on liian suuri! Maksimikoko on 10MB.');
-      return;
-    }
-
-    // Tarkista tiedostotyyppi
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    const isImage = allowedTypes.includes(file.type);
-    
-    if (!isImage && !file.type.startsWith('image/')) {
-      alert('Vain kuvat ovat tuettuja tällä hetkellä.');
-      return;
-    }
-
-    setUploading(true);
-    
-    try {
-      console.log("📁 Ladataan tiedosto:", file.name, file.size, "bytes");
-      
-      // Luo unique filename
-      const fileExtension = file.name.split('.').pop();
-      const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExtension}`;
-      const filePath = `chat-files/${roomId}/${fileName}`;
-      
-      // Upload tiedosto Firebase Storage:een
-      const storageRef = ref(storage, filePath);
-      
-      console.log("📤 Aloitetaan upload:", filePath);
-      
-      const uploadResult = await uploadBytes(storageRef, file);
-      
-      console.log("✅ Tiedosto ladattu:", uploadResult.metadata.fullPath);
-      
-      // Hae download URL
-      const downloadURL = await getDownloadURL(storageRef);
-      
-      console.log("🔗 Download URL:", downloadURL);
-      
-      // 🛡️ KUVAN MODERATION TARKISTUS
-      if (isImage) {
-        console.log("Moderoidaan kuva:", downloadURL);
-        
-        const moderationResult = await smartModerationService.moderateImage(downloadURL, user.uid);
-        
-        console.log("Kuvan moderation tulos:", moderationResult);
-        
-        // Jos kuva estetään
-        if (moderationResult.isBlocked) {
-          // Poista kuva Storage:sta
-          await deleteObject(storageRef);
-          alert(moderationResult.warningMessage || 'Kuva estetty moderaation vuoksi');
-          return;
-        }
-        
-        // Jos haitallista sisältöä, näytä varoitus
-        if (moderationResult.isHarmful && moderationResult.warningMessage) {
-          alert(moderationResult.warningMessage);
-        }
-      }
-      
-      // Lähetä viesti tiedostolla
-      const messageData = {
-        type: 'file',
-        fileUrl: downloadURL,
-        fileName: file.name,
-        fileSize: file.size,
-        fileType: file.type,
-        isImage: isImage,
-        storagePath: filePath,
-        senderId: user.uid,
-        senderName: profile.displayName,
-        timestamp: serverTimestamp(),
-        roomId: roomId
-      };
-
-      await addDoc(collection(db, 'rooms', roomId, 'messages'), messageData);
-      
-      console.log("✅ Tiedostoviesti lähetetty!");
-      
-    } catch (error) {
-      console.error('❌ Virhe tiedoston lähettämisessä:', error);
-      
-      // Specific error handling for Firebase Storage
-      if (error.code === 'storage/unauthorized') {
-        alert('Tiedoston lataus estetty. Tarkista että Firebase Storage on konfiguroitu oikein.');
-      } else if (error.code === 'storage/bucket-not-found') {
-        alert('Firebase Storage bucket ei löydy. Ota yhteyttä ylläpitoon.');
-      } else if (error.code === 'storage/quota-exceeded') {
-        alert('Tallennustila täynnä. Yritä pienemmällä tiedostolla.');
-      } else if (error.code === 'storage/retry-limit-exceeded') {
-        alert('Verkkovirhe. Tarkista internetyhteys ja yritä uudelleen.');
-      } else if (error.message && error.message.includes('CORS')) {
-        alert('Verkko-ongelma. Tiedoston lataus ei onnistunut. Yritä hetken päästä uudelleen.');
-      } else {
-        alert('Tiedoston lähetys epäonnistui. Yritä uudelleen.');
-      }
-    } finally {
-      setUploading(false);
-      // Tyhjennä file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
   const sendMessage = async (e) => {
     e.preventDefault();
     
@@ -483,20 +370,10 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         }
       }
       
-      // Poista kaikki viestit (ja niihin liittyvät tiedostot) ennen huoneen poistamista
+      // Poista kaikki viestit ennen huoneen poistamista
       try {
         const msgsSnap = await getDocs(collection(db, 'rooms', roomId, 'messages'));
         for (const msgDoc of msgsSnap.docs) {
-          const data = msgDoc.data();
-          // Jos viesti sisälsi tiedoston, yritä poistaa myös Storage:sta
-          if (data.type === 'file' && data.storagePath) {
-            try {
-              await deleteObject(ref(storage, data.storagePath));
-              console.log('🧹 Poistettu tallennettu tiedosto:', data.storagePath);
-            } catch (fileErr) {
-              console.warn('⚠️ Tiedoston poisto epäonnistui (jatketaan):', fileErr?.message || fileErr);
-            }
-          }
           try {
             await deleteDoc(doc(db, 'rooms', roomId, 'messages', msgDoc.id));
           } catch (msgErr) {
@@ -657,49 +534,9 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
                 key={message.id}
                 className={`message-wrapper ${isOwn ? 'own' : 'other'}`}
               >
-                <div className={`message ${isOwn ? 'own' : 'other'} ${message.type === 'file' ? 'file-message' : ''}`}>
+                <div className={`message ${isOwn ? 'own' : 'other'}`}>
                   <div className="message-content">
-                    {message.type === 'file' ? (
-                      <div className="file-content">
-                        {message.isImage ? (
-                          <div className="image-container">
-                            <img 
-                              src={message.fileUrl} 
-                              alt={message.fileName}
-                              className="message-image"
-                              onLoad={(e) => {
-                                // Scroll after image loads
-                                setTimeout(() => {
-                                  messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-                                }, 100);
-                              }}
-                            />
-                            <div className="file-info">
-                              <span className="file-name">{message.fileName}</span>
-                              <span className="file-size">{(message.fileSize / 1024).toFixed(1)} KB</span>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="file-download">
-                            <div className="file-icon">📄</div>
-                            <div className="file-details">
-                              <div className="file-name">{message.fileName}</div>
-                              <div className="file-size">{(message.fileSize / 1024).toFixed(1)} KB</div>
-                            </div>
-                            <a 
-                              href={message.fileUrl} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="file-download-btn"
-                            >
-                              ⬇️
-                            </a>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      message.text
-                    )}
+                    {message.text}
                   </div>
                   <div className="message-time">
                     {formatTime(message.timestamp)}
@@ -715,26 +552,6 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       {/* Snapchat/WhatsApp-tyylinen input */}
       <div className="chat-input-container">
         <form onSubmit={sendMessage} className="chat-input-form">
-          {/* File input (hidden) */}
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-            accept="image/*"
-            style={{ display: 'none' }}
-          />
-          
-          {/* File attach button */}
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={!roomReady || uploading}
-            className="chat-file-btn"
-            title="Lähetä kuva"
-          >
-            {uploading ? '⏳' : '📎'}
-          </button>
-          
           <textarea
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
