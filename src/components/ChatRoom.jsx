@@ -607,7 +607,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       </audio>
       
       <audio ref={joinSoundRef}>
-        <source src="/join.mp3" type="audio/mpeg" />
+        <source src="/join.wav" type="audio/wav" />
         Selaimesi ei tue ääntä.
       </audio>
       
