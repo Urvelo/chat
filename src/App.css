@@ -1831,3 +1831,52 @@ html, body {
     width: 100%;
   }
 }
+
+/* Käyttöehdot linkki */
+.terms-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid #e0e0e0;
+  padding: 8px 16px;
+  text-align: center;
+  z-index: 1000;
+}
+
+.terms-link {
+  color: #666;
+  text-decoration: none;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.2s ease;
+}
+
+.terms-link:hover {
+  color: #007AFF;
+  text-decoration: underline;
+}
+
+/* Mobile - piilotetaan chat-inputin takana */
+@media (max-width: 768px) {
+  .terms-footer {
+    bottom: 60px; /* Chat-inputin yläpuolella */
+    background: rgba(255, 255, 255, 0.9);
+    padding: 4px 12px;
+  }
+  
+  .terms-link {
+    font-size: 11px;
+  }
+}
+
+/* Desktop - näkyy alhaalla */
+@media (min-width: 769px) {
+  .chat-container {
+    padding-bottom: 40px; /* Tilaa käyttöehdoille */
+  }
+}

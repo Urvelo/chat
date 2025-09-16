@@ -333,21 +333,15 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
           let blocked = false;
           let reason = [];
           
-          // Tarkista kriittiset kategoriat tiukoilla rajoilla
+          // Tarkista kriittiset kategoriat kohtuullisilla rajoilla
           const categories = [
-            { name: 'seksuaalinen sisältö', key: 'sexual', threshold: 0.15 },       // 15% (oli 30%)
-            { name: 'häirintä', key: 'harassment', threshold: 0.05 },               // 5% (oli 10%)
-            { name: 'väkivalta', key: 'violence', threshold: 0.05 },                // 5% (oli 10%)
-            { name: 'vihapuhe', key: 'hate', threshold: 0.02 },                     // 2% (oli 5%)
-            { name: 'itsensä vahingoittaminen', key: 'self-harm', threshold: 0.02 }, // 2% (oli 5%)
-            { name: 'uhkaava häirintä', key: 'harassment/threatening', threshold: 0.005 },
-            { name: 'uhkaava vihapuhe', key: 'hate/threatening', threshold: 0.005 },
-            { name: 'graafinen väkivalta', key: 'violence/graphic', threshold: 0.005 },
-            { name: 'itsensä vahingoittamisen ohjeet', key: 'self-harm/instructions', threshold: 0.005 },
-            { name: 'itsensä vahingoittamisen aikomus', key: 'self-harm/intent', threshold: 0.005 }
-          ];
-          
-          categories.forEach(category => {
+            { name: 'seksuaalinen sisältö', key: 'sexual', threshold: 0.25 },       // 25% (oli 15%)
+            { name: 'häirintä', key: 'harassment', threshold: 0.08 },               // 8% (oli 5%)
+            { name: 'väkivalta', key: 'violence', threshold: 0.08 },                // 8% (oli 5%)
+            { name: 'viha', key: 'hate', threshold: 0.05 },                         // 5% (oli 2%)
+            { name: 'uhkaava häirintä', key: 'harassment/threatening', threshold: 0.01 }, // 1% (oli 0.5%)
+            { name: 'uhkaava väkivalta', key: 'violence/graphic', threshold: 0.01 }  // 1% (oli 0.5%)
+          ];          categories.forEach(category => {
             const score = scores[category.key] || 0;
             if (score > category.threshold) {
               blocked = true;
@@ -845,6 +839,18 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
             <span className="send-arrow">➤</span>
           </button>
         </form>
+      </div>
+
+      {/* Käyttöehdot - kiinteä linkki alareunassa */}
+      <div className="terms-footer">
+        <a 
+          href="/terms" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="terms-link"
+        >
+          📋 Käyttöehdot ja tietosuoja
+        </a>
       </div>
 
       {/* Feedback Modal */}
