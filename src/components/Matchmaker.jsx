@@ -428,37 +428,16 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
                     
                     // Aloita/lopeta musiikki heti
                     if (e.target.checked) {
-                      // Soittolista: soita kaikki kappaleet peräkkäin
-                      const playlist = [
-                        "/rauhaisa_piano.mp3",
-                        "/ambient_music.mp3", 
-                        "/nature_sounds.mp3",
-                        "/lofi_beats.mp3"
-                      ];
+                      // Soita uusi meditaatiomusiikki
+                      const audio = new Audio('/meditation-relaxing-music-293922.mp3');
+                      audio.volume = 0.15;
+                      audio.loop = true;
                       
-                      let currentTrack = 0;
+                      audio.play().catch(error => {
+                        console.log("Automaattinen musiikki estetty selaimessa:", error);
+                      });
                       
-                      const playNext = () => {
-                        if (currentTrack >= playlist.length) {
-                          currentTrack = 0; // Aloita alusta
-                        }
-                        
-                        const audio = new Audio(playlist[currentTrack]);
-                        audio.volume = 0.15;
-                        
-                        audio.addEventListener('ended', () => {
-                          currentTrack++;
-                          playNext(); // Soita seuraava kappale
-                        });
-                        
-                        audio.play().catch(error => {
-                          console.log("Automaattinen musiikki estetty selaimessa:", error);
-                        });
-                        
-                        window.backgroundMusic = audio;
-                      };
-                      
-                      playNext(); // Aloita soittolista
+                      window.backgroundMusic = audio;
                     } else {
                       // Pysäytä musiikki
                       if (window.backgroundMusic) {
@@ -470,7 +449,7 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
                   }}
                 />
                 <span className="checkmark"></span>
-                🎵 Soita rauhallista pianomusiikkia
+                🎵 Soita rauhallista meditaatiomusiikkia
               </label>
             </div>
             
