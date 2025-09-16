@@ -978,12 +978,18 @@ html, body {
   background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
   border: 2px solid #333333;
   color: #ffffff;
-  padding: 1rem 1.5rem;
-  border-radius: 25px;
+  padding: 0.8rem 1rem;
+  border-radius: 18px;
   font-size: 1rem;
   outline: none;
   transition: all 0.3s ease;
   touch-action: manipulation;
+  line-height: 1.4;
+  max-height: 150px; /* Rajaa korkeuden */
+  overflow-y: auto;  /* Näytä scrolli jos yli */
+  width: 100%;
+  display: block;
+  box-sizing: border-box;
 }
 
 .chat-input:focus {

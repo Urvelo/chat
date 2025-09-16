@@ -36,17 +36,20 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         const bothReady = data.bothReady || false;
         const users = data.users || [];
         
-        // Varmista että users on array
+        // Varmista että users on array ja sisältää valideja objekteja
         if (!Array.isArray(users)) {
-          console.warn("⚠️ Users ei ole array:", users);
-          return;
+          console.warn("⚠️ Users ei ole array, korjataan:", users);
+          // Jos users on objekti, yritä muuntaa arrayksi
+          const usersArray = users && typeof users === 'object' ? Object.values(users) : [];
+          data.users = usersArray.filter(u => u && typeof u === 'object' && u.uid);
         }
         
         // Tarkista onko molemmat merkinneet itsensä valmiiksi
-        const readyCount = users.filter(u => u && u.ready).length;
+        const validUsers = data.users.filter(u => u && u.uid);
+        const readyCount = validUsers.filter(u => u.ready).length;
         const allReady = readyCount >= 2;
         
-        console.log("Huoneen tila:", { bothReady, readyCount, allReady, usersCount: users.length });
+        console.log("Huoneen tila:", { bothReady, readyCount, allReady, usersCount: validUsers.length });
         
         if (allReady && !bothReady) {
           // Päivitä bothReady kun molemmat valmiita
@@ -635,19 +638,33 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
             {uploading ? '⏳' : '📎'}
           </button>
           
-          <input
-            type="text"
+          <textarea
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onFocus={handleInputFocus}
             onBlur={handleInputBlur}
+            onInput={(e) => {
+              // Auto-resize up to ~150px height
+              const el = e.target;
+              el.style.height = 'auto';
+              el.style.height = Math.min(el.scrollHeight, 150) + 'px';
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                // Trigger send on Enter (Shift+Enter = newline)
+                sendMessage({ preventDefault: () => {} });
+              }
+            }}
             placeholder={roomReady ? "Kirjoita viesti..." : "Odotetaan toista käyttäjää..."}
             className="chat-input"
+            rows={1}
             maxLength={500}
             autoComplete="off"
             disabled={!roomReady}
             inputMode="text"
             enterKeyHint="send"
+            style={{ resize: 'none' }}
           />
           <button 
             type="submit" 
