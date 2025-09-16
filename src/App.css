@@ -1075,8 +1075,8 @@ html, body {
   overflow-y: auto;
   overflow-x: hidden;
   padding: 1rem;
-  padding-bottom: 140px; /* Lisää tilaa input-containerille */
-  min-height: calc(100vh - 200px); /* Varmistaa että on tarpeeksi korkeutta */
+  padding-bottom: 200px; /* Lisätty tilaa input-containerille */
+  min-height: calc(100vh - 150px); /* Varmistaa että on tarpeeksi korkeutta */
   display: flex;
   flex-direction: column;
   gap: 0.8rem;
@@ -1409,7 +1409,7 @@ html, body {
   
   .chat-input-container {
     padding: 1rem;
-    padding-bottom: calc(2rem + env(safe-area-inset-bottom) + 30px);
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom) + 20px);
   }
   
   .chat-input {
@@ -1615,7 +1615,7 @@ html, body {
   }
   
   .chat-messages {
-    height: 300px;
+    padding-bottom: 180px; /* Vielä enemmän tilaa mobilessa */
   }
   
   .message.own {
