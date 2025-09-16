@@ -293,24 +293,99 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     }
 
     try {
-      console.log("Moderoidaan viesti:", newMessage.trim());
+      // HYBRIDIMALLI: Offline (suomi) + OpenAI (englanti + konteksti)
+      console.log("Moderoidaan viesti hybridimallilla:", newMessage.trim());
       
-      // 🛡️ MODERATION TARKISTUS
-      const moderationResult = await smartModerationService.moderateMessage(newMessage.trim(), user.uid);
+      // 1. OFFLINE MODEROINTI (suomalaiset sanat)
+      const offlineResult = await smartModerationService.moderateMessage(newMessage.trim(), user.uid);
+      console.log("📱 Offline moderation tulos:", offlineResult);
       
-      console.log("Moderation tulos:", moderationResult);
-      
-      // Jos viesti estetään
-      if (moderationResult.isBlocked) {
-        alert(moderationResult.warningMessage || 'Viesti estetty moderaation vuoksi');
-        setNewMessage(''); // Tyhjennä kenttä
+      if (offlineResult.isBlocked) {
+        alert(offlineResult.warningMessage || '🚫 Viesti estetty: sopimaton sisältö');
+        setNewMessage('');
         return;
       }
       
-      // Jos haitallista sisältöä mutta ei estetä, näytä varoitus
-      if (moderationResult.isHarmful && moderationResult.warningMessage) {
-        alert(moderationResult.warningMessage);
-        // Jatka viestin lähettämistä varoituksen jälkeen
+      // 2. OPENAI API (englanti + konteksti)
+      try {
+        const openAIResponse = await fetch('https://api.openai.com/v1/moderations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`
+          },
+          body: JSON.stringify({
+            input: newMessage.trim(),
+            model: 'omni-moderation-latest'
+          })
+        });
+        
+        const moderationData = await openAIResponse.json();
+        console.log('🤖 OpenAI Moderation vastaus:', moderationData);
+        
+        if (moderationData.results && moderationData.results[0]) {
+          const result = moderationData.results[0];
+          console.log('📊 Kategoriat:', result.categories);
+          console.log('📈 Pisteet:', result.category_scores);
+          
+          // TIUKAT KRITEERIT - tarkista pisteet suoraan
+          const scores = result.category_scores;
+          let blocked = false;
+          let reason = [];
+          
+          // SEKSUAALINEN sisältö: raja 0.15 (alkuperäinen ~0.9)
+          if (scores.sexual > 0.15) {
+            blocked = true;
+            reason.push(`seksuaalinen sisältö (${(scores.sexual * 100).toFixed(1)}%)`);
+          }
+          
+          // HÄIRINTÄ: raja 0.2 (alkuperäinen ~0.8)
+          if (scores.harassment > 0.2) {
+            blocked = true;
+            reason.push(`häirintä (${(scores.harassment * 100).toFixed(1)}%)`);
+          }
+          
+          // VÄKIVALTA: raja 0.1 (alkuperäinen ~0.7)
+          if (scores.violence > 0.1) {
+            blocked = true;
+            reason.push(`väkivalta (${(scores.violence * 100).toFixed(1)}%)`);
+          }
+          
+          // ITSENSÄ VAHINGOITTAMINEN: raja 0.2
+          if (scores['self-harm'] > 0.2) {
+            blocked = true;
+            reason.push(`itsensä vahingoittaminen (${(scores['self-harm'] * 100).toFixed(1)}%)`);
+          }
+          
+          // VIHAPUHE: raja 0.15
+          if (scores.hate > 0.15) {
+            blocked = true;
+            reason.push(`vihapuhe (${(scores.hate * 100).toFixed(1)}%)`);
+          }
+          
+          // Jos ylittää jonkin rajan tai alkuperäinen flagged
+          if (blocked || result.flagged) {
+            if (result.flagged && reason.length === 0) {
+              // Jos OpenAI flaggasi mutta ei yksikään meidän raja
+              const flaggedCategories = Object.keys(result.categories).filter(key => result.categories[key]);
+              reason = flaggedCategories;
+            }
+            
+            alert(`🚫 Viesti estetty OpenAI API:n toimesta\n📋 Syy: ${reason.join(', ')}`);
+            console.log('🚫 Estetty syyt:', reason);
+            setNewMessage('');
+            return;
+          }
+          
+          console.log('✅ OpenAI: Viesti hyväksytty kaikissa kategorioissa');
+        }
+      } catch (apiError) {
+        console.error('❌ OpenAI API virhe, käytetään vain offline-moderointia:', apiError);
+      }
+      
+      // Jos offline antoi varoituksen mutta ei estänyt
+      if (offlineResult.isHarmful && offlineResult.warningMessage) {
+        alert(offlineResult.warningMessage);
       }
       
       // Lähetä viesti
