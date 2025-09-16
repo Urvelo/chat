@@ -25,9 +25,10 @@ body {
   flex: 1;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start; /* Muutettu center -> flex-start */
   padding: 2rem 1rem;
   min-height: 100vh;
+  overflow-y: auto; /* Lisätty scrollaus */
 }
 
 /* Chat mode - full screen */
@@ -89,6 +90,20 @@ body {
 .auth-container {
   width: 100%;
   max-width: 420px;
+}
+
+/* Profile Setup Container */
+.profile-setup-container {
+  width: 100%;
+  max-width: 600px;
+  margin: 1rem 0;
+}
+
+.profile-form {
+  background: #1a1a1a;
+  border: 1px solid #333333;
+  padding: 2.5rem;
+  border-radius: 0;
 }
 
 /* Desktop Auth */
@@ -366,8 +381,6 @@ body {
   padding: 1.5rem;
   margin: 1rem 0;
   border-radius: 0;
-  max-height: 400px;
-  overflow-y: auto;
 }
 
 .terms-summary h3 {
@@ -417,7 +430,6 @@ body {
 /* Responsive adjustments for terms */
 @media (max-width: 768px) {
   .terms-summary {
-    max-height: 300px;
     padding: 1rem;
   }
   
