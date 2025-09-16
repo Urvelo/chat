@@ -4,7 +4,8 @@ import { getCachedFingerprint } from '../utils/fingerprint';
 
 const ProfileSetup = ({ user, onProfileComplete }) => {
   const [profile, setProfile] = useState({
-    termsAccepted: false
+    termsAccepted: false,
+    backgroundMusic: true // Oletuksena päälle
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -62,6 +63,9 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
         return '25+';
       };
       
+      // Tallenna musiikkiasetus localStorage:iin
+      localStorage.setItem("playMusic", profile.backgroundMusic.toString());
+      
       // Luo profiili
       const profileData = {
         uid: user.uid,
@@ -71,6 +75,7 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
         ageGroup: calculateAgeGroup(user.age),
         deviceFingerprint: deviceFingerprint,
         termsAccepted: true,
+        backgroundMusic: profile.backgroundMusic,
         createdAt: new Date(),
         lastActive: new Date()
       };
@@ -174,6 +179,21 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
                 </ul>
               </div>
             </div>
+          </div>
+
+          {/* Musiikkivalinta */}
+          <div className="music-preference">
+            <h3>🎵 Taustamusiikki</h3>
+            <label className="music-checkbox">
+              <input
+                type="checkbox"
+                name="backgroundMusic"
+                checked={profile.backgroundMusic}
+                onChange={handleInputChange}
+              />
+              <span className="checkmark"></span>
+              Soita rauhallista meditaatiomusiikkia taustalla
+            </label>
           </div>
 
           <button 

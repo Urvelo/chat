@@ -436,42 +436,6 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
         
         {status === 'idle' && (
           <div className="search-controls">
-            {/* Musiikkivalinta */}
-            <div className="music-option">
-              <label className="music-checkbox">
-                <input 
-                  type="checkbox" 
-                  checked={localStorage.getItem("playMusic") !== "false"}
-                  onChange={(e) => {
-                    localStorage.setItem("playMusic", e.target.checked);
-                    
-                    // Aloita/lopeta musiikki heti
-                    if (e.target.checked) {
-                      // Soita uusi meditaatiomusiikki
-                      const audio = new Audio('/meditation-relaxing-music-293922.mp3');
-                      audio.volume = 0.15;
-                      audio.loop = true;
-                      
-                      audio.play().catch(error => {
-                        console.log("Automaattinen musiikki estetty selaimessa:", error);
-                      });
-                      
-                      window.backgroundMusic = audio;
-                    } else {
-                      // Pysäytä musiikki
-                      if (window.backgroundMusic) {
-                        window.backgroundMusic.pause();
-                        window.backgroundMusic.currentTime = 0;
-                        window.backgroundMusic = null;
-                      }
-                    }
-                  }}
-                />
-                <span className="checkmark"></span>
-                🎵 Soita rauhallista meditaatiomusiikkia
-              </label>
-            </div>
-            
             <button 
               onClick={startSearching}
               className="start-search-btn"
