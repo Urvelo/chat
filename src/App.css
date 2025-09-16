@@ -804,14 +804,14 @@ html, body {
 @media (min-width: 769px) {
   .chat-container {
     position: relative;
-    width: 100%;
-    max-width: min(800px, 95vw); /* Leveämpi desktop-versio */
-    height: min(800px, 90vh); /* Korkeampi mutta ei yli näytön */
-    border: 1px solid #333333;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
-    border-radius: 16px; /* Isommat pyöristetyt kulmat */
+    width: 100vw; /* Koko näytön leveys */
+    max-width: none; /* Ei rajoitusta */
+    height: 100vh; /* Koko näytön korkeus */
+    border: none; /* Ei reunaviivoja koko näytössä */
+    box-shadow: none; /* Ei varjoja koko näytössä */
+    border-radius: 0; /* Ei pyöristettyjä kulmia */
     overflow: hidden;
-    margin: 2rem auto; /* Keskitetty margin */
+    margin: 0; /* Ei marginaaleja */
     /* Override mobile fixed positioning */
     top: auto;
     left: auto;
@@ -819,18 +819,18 @@ html, body {
   }
 
   .app-container {
-    padding: 1rem;
-    justify-content: center;
-    align-items: center;
+    padding: 0; /* Ei paddingja desktopissa */
+    justify-content: stretch; /* Venytä koko näytölle */
+    align-items: stretch;
   }
 
-  /* Keskitä chat desktopissa */
+  /* Keskitä chat desktopissa - nyt koko näyttö */
   .app-main.chat-main {
     display: flex;
-    justify-content: center;
-    align-items: center;
+    justify-content: stretch;
+    align-items: stretch;
     min-height: 100vh;
-    padding: 2rem 1rem;
+    padding: 0; /* Ei paddingja */
   }
 
   /* Desktop chat input adjustments */
@@ -870,31 +870,31 @@ html, body {
   }
 }
 
-/* Suuret näytöt - parempi skaalaus */
+/* Suuret näytöt - koko näyttö */
 @media (min-width: 1200px) {
   .chat-container {
-    max-width: 900px; /* Suurempi suurille näytöille */
-    height: min(850px, 85vh);
+    max-width: none; /* Koko näytön leveys */
+    height: 100vh; /* Koko näytön korkeus */
   }
 
   .app-main.chat-main {
-    padding: 3rem 2rem;
+    padding: 0; /* Ei paddingja */
   }
 }
 
-/* Erittäin suuret näytöt */
+/* Erittäin suuret näytöt - koko näyttö */
 @media (min-width: 1600px) {
   .chat-container {
-    max-width: 1100px;
-    height: min(900px, 80vh);
+    max-width: none; /* Koko näytön leveys */
+    height: 100vh; /* Koko näytön korkeus */
   }
 
   .app-main.chat-main {
-    padding: 4rem 3rem;
+    padding: 0; /* Ei paddingja */
   }
 
   .chat-input-container {
-    padding: 2rem 2.5rem;
+    padding: 1.5rem 2rem; /* Normaali padding */
   }
 
   .chat-input {
