@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, getDoc, deleteDoc, setDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, getDoc, deleteDoc, setDoc, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '../firebase';
 import { smartModerationService } from '../utils/smart-moderation.js';
@@ -11,6 +11,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
   const [roomReady, setRoomReady] = useState(false);
   const [waitingForOther, setWaitingForOther] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [showReportMenu, setShowReportMenu] = useState(false);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -391,7 +392,57 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     }
   };
 
-  // Deaktivoi huone ja poistu - poista huone aina kokonaan
+  // Ilmoita käyttäjä (3 ilmoitusta = banni)
+  const reportUser = async () => {
+    try {
+      if (!otherUser?.uid) {
+        console.warn("Ei voida ilmoittaa: toista käyttäjää ei löydy");
+        return;
+      }
+
+      console.log("📋 Ilmoitetaan käyttäjä:", otherUser.uid);
+      
+      // Hae nykyinen profiili
+      const profileRef = doc(db, 'profiles', otherUser.uid);
+      const profileSnap = await getDoc(profileRef);
+      
+      if (!profileSnap.exists()) {
+        console.warn("Käyttäjän profiilia ei löydy, ei voida ilmoittaa");
+        return;
+      }
+      
+      const currentProfile = profileSnap.data();
+      const currentReports = currentProfile.reports || 0;
+      const newReportCount = currentReports + 1;
+      
+      // Päivitä ilmoitusten määrä
+      await updateDoc(profileRef, {
+        reports: newReportCount,
+        lastReported: new Date(),
+        // Jos 3+ ilmoitusta, merkitse bannatuksi
+        ...(newReportCount >= 3 ? { 
+          banned: true, 
+          bannedAt: new Date(),
+          bannedReason: `Automaattinen banni: ${newReportCount} ilmoitusta`
+        } : {})
+      });
+      
+      console.log(`✅ Käyttäjä ilmoitettu (${newReportCount}/3 ilmoitusta)`);
+      
+      if (newReportCount >= 3) {
+        alert(`Käyttäjä on bannattu ${newReportCount} ilmoituksen jälkeen. Kiitos ilmoituksesta!`);
+        // Poistu huoneesta automaattisesti
+        leaveRoom();
+      } else {
+        alert(`Käyttäjä ilmoitettu (${newReportCount}/3). Kiitos ilmoituksesta!`);
+        setShowReportMenu(false);
+      }
+      
+    } catch (error) {
+      console.error('❌ Virhe käyttäjän ilmoittamisessa:', error);
+      alert('Ilmoitus epäonnistui. Yritä uudelleen.');
+    }
+  };
   const leaveRoom = async () => {
     try {
       console.log("🗑️ Poistetaan chat-huone kokonaan:", roomId);
@@ -537,6 +588,24 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
           </div>
         </div>
         <div className="chat-actions">
+          {/* Kebab menu */}
+          <div className="kebab-menu">
+            <button 
+              onClick={() => setShowReportMenu(!showReportMenu)}
+              className="kebab-btn"
+              title="Lisää toiminnot"
+            >
+              ⋮
+            </button>
+            {showReportMenu && (
+              <div className="kebab-dropdown">
+                <button onClick={reportUser} className="report-btn">
+                  🚨 Ilmoita käyttäjä
+                </button>
+              </div>
+            )}
+          </div>
+          
           <button onClick={leaveRoom} className="leave-btn">
             ✖️
           </button>

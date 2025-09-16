@@ -217,6 +217,18 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
   // Aloita käyttäjien etsintä
   const startSearching = async () => {
     try {
+      // Tarkista onko käyttäjä bannattu
+      const profileRef = doc(db, 'profiles', user.uid);
+      const profileSnap = await getDoc(profileRef);
+      
+      if (profileSnap.exists()) {
+        const profileData = profileSnap.data();
+        if (profileData.banned) {
+          alert('Et voi käyttää palvelua. Syy: ' + (profileData.bannedReason || 'Käyttöehtojen rikkominen'));
+          return;
+        }
+      }
+      
       // Korjaa profiili jos ageGroup puuttuu
       let workingProfile = { ...profile };
       if (!workingProfile.ageGroup) {

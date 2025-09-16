@@ -816,6 +816,63 @@ html, body {
   flex-shrink: 0;
 }
 
+.kebab-menu {
+  position: relative;
+}
+
+.kebab-btn {
+  background: none;
+  border: 2px solid #666666;
+  color: #cccccc;
+  padding: 0.8rem;
+  cursor: pointer;
+  font-size: 1.1rem;
+  border-radius: 50%;
+  width: 45px;
+  height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  touch-action: manipulation;
+}
+
+.kebab-btn:hover,
+.kebab-btn:active {
+  background: #444444;
+  color: #ffffff;
+  transform: scale(1.1);
+}
+
+.kebab-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: #2a2a2a;
+  border: 1px solid #444444;
+  border-radius: 8px;
+  min-width: 160px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  margin-top: 0.5rem;
+}
+
+.report-btn {
+  width: 100%;
+  background: none;
+  border: none;
+  color: #ff6666;
+  padding: 0.8rem 1rem;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.2s ease;
+}
+
+.report-btn:hover {
+  background: #3a3a3a;
+}
+
 .chat-actions .leave-btn {
   background: none;
   border: 2px solid #ff4444;
