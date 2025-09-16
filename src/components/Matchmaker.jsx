@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, deleteDoc, setDoc, serverTimestamp, getDocs, getDoc, db } from '../firebase';
 import { v4 as uuidv4 } from 'uuid';
+import FeedbackModal from './FeedbackModal';
 
 const Matchmaker = ({ user, profile, onRoomJoined }) => {
   const [isSearching, setIsSearching] = useState(false);
@@ -9,6 +10,7 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
   const [searchStartTime, setSearchStartTime] = useState(null);
   const [unsubscribe, setUnsubscribe] = useState(null);
   const [activeUsersCount, setActiveUsersCount] = useState(0);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   // Debug loggaus
   console.log("Matchmaker saanut props:", { user, profile });
@@ -371,6 +373,12 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
         {/* Aktiivisten käyttäjien näyttö */}
         <div className="user-stats">
           <p>👥 Aktiivisia käyttäjiä: <strong>{activeUsersCount}</strong></p>
+          <button 
+            onClick={() => setShowFeedbackModal(true)} 
+            className="feedback-link-btn"
+          >
+            💬 Anna palautetta
+          </button>
         </div>
         
         {status === 'idle' && (
@@ -422,6 +430,12 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
           </div>
         )}
       </div>
+
+      {/* Feedback Modal */}
+      <FeedbackModal 
+        isOpen={showFeedbackModal} 
+        onClose={() => setShowFeedbackModal(false)} 
+      />
     </div>
   );
 };

@@ -3,6 +3,7 @@ import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, u
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '../firebase';
 import { smartModerationService } from '../utils/smart-moderation.js';
+import FeedbackModal from './FeedbackModal';
 
 const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
   const [messages, setMessages] = useState([]);
@@ -12,6 +13,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
   const [waitingForOther, setWaitingForOther] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [showReportMenu, setShowReportMenu] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -602,6 +604,15 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
                 <button onClick={reportUser} className="report-btn">
                   🚨 Ilmoita käyttäjä
                 </button>
+                <button 
+                  onClick={() => {
+                    setShowFeedbackModal(true);
+                    setShowReportMenu(false);
+                  }} 
+                  className="feedback-btn"
+                >
+                  💬 Anna palautetta
+                </button>
               </div>
             )}
           </div>
@@ -744,6 +755,12 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
           </button>
         </form>
       </div>
+
+      {/* Feedback Modal */}
+      <FeedbackModal 
+        isOpen={showFeedbackModal} 
+        onClose={() => setShowFeedbackModal(false)} 
+      />
     </div>
   );
 };

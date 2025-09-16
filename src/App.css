@@ -492,12 +492,34 @@ body {
   padding: 1rem;
   margin-bottom: 1.5rem;
   border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .user-stats p {
   color: #cccccc;
   margin: 0;
   font-size: 1rem;
+}
+
+.feedback-link-btn {
+  background: none;
+  border: 1px solid #66ccff;
+  color: #66ccff;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.feedback-link-btn:hover {
+  background: #66ccff;
+  color: #000;
 }
 
 /* Piilotus-tila */
@@ -870,6 +892,22 @@ html, body {
 }
 
 .report-btn:hover {
+  background: #3a3a3a;
+}
+
+.feedback-btn {
+  width: 100%;
+  background: none;
+  border: none;
+  color: #66ccff;
+  padding: 0.8rem 1rem;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.2s ease;
+}
+
+.feedback-btn:hover {
   background: #3a3a3a;
 }
 
@@ -1429,5 +1467,210 @@ html, body {
   
   .message.other {
     margin-right: 1rem;
+  }
+}
+
+/* Feedback Modal Styles */
+.feedback-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.feedback-modal {
+  background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+  border-radius: 1rem;
+  border: 1px solid #333;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.feedback-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #333;
+}
+
+.feedback-header h3 {
+  color: #ffffff;
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.2rem;
+  border-radius: 0.3rem;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background: #333;
+  color: #fff;
+}
+
+.feedback-form {
+  padding: 1.5rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  color: #ccc;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.feedback-input,
+.feedback-textarea {
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid #444;
+  border-radius: 0.5rem;
+  background: #222;
+  color: #fff;
+  font-size: 1rem;
+  transition: border-color 0.2s ease;
+}
+
+.feedback-input:focus,
+.feedback-textarea:focus {
+  outline: none;
+  border-color: #007acc;
+  box-shadow: 0 0 0 2px rgba(0, 122, 204, 0.2);
+}
+
+.feedback-textarea {
+  resize: vertical;
+  min-height: 120px;
+  font-family: inherit;
+}
+
+.char-count {
+  text-align: right;
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 0.3rem;
+}
+
+.feedback-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 2rem;
+}
+
+.cancel-btn,
+.submit-btn {
+  padding: 0.8rem 1.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancel-btn {
+  background: #333;
+  color: #ccc;
+}
+
+.cancel-btn:hover {
+  background: #444;
+  color: #fff;
+}
+
+.submit-btn {
+  background: linear-gradient(135deg, #007acc, #0099ff);
+  color: white;
+  font-weight: 500;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0056b3, #007acc);
+  transform: translateY(-1px);
+}
+
+.submit-btn:disabled {
+  background: #555;
+  color: #888;
+  cursor: not-allowed;
+}
+
+.feedback-success {
+  padding: 2rem;
+  text-align: center;
+}
+
+.success-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.feedback-success p {
+  color: #ccc;
+  margin-bottom: 0.5rem;
+}
+
+.feedback-success p:first-of-type {
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+/* Mobile responsive */
+@media (max-width: 600px) {
+  .user-stats {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.8rem;
+  }
+  
+  .feedback-link-btn {
+    align-self: center;
+  }
+  
+  .feedback-overlay {
+    padding: 0.5rem;
+  }
+  
+  .feedback-modal {
+    max-height: 95vh;
+  }
+  
+  .feedback-header,
+  .feedback-form,
+  .feedback-success {
+    padding: 1rem;
+  }
+  
+  .feedback-actions {
+    flex-direction: column-reverse;
+    gap: 0.8rem;
+  }
+  
+  .cancel-btn,
+  .submit-btn {
+    width: 100%;
   }
 }
