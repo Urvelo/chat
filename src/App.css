@@ -304,15 +304,6 @@ body {
   margin: 1.5rem 0;
 }
 
-/* Käyttöehtojen hyväksyminen ProfileSetupissa */
-.terms-preference {
-  margin: 1.5rem 0;
-  padding: 1rem;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
 .music-checkbox-simple {
   display: inline-flex;
   align-items: center;

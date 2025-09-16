@@ -5,8 +5,7 @@ import { getCachedFingerprint } from '../utils/fingerprint';
 const ProfileSetup = ({ user, onProfileComplete }) => {
   const [profile, setProfile] = useState({
     termsAccepted: false,
-    backgroundMusic: true, // Oletuksena päälle
-    acceptTerms: false // Käyttöehdot pitää hyväksyä
+    backgroundMusic: true // Oletuksena päälle
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -64,9 +63,6 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
         return '25+';
       };
       
-      // Tallenna musiikkiasetus localStorage:iin
-      localStorage.setItem("playMusic", profile.backgroundMusic.toString());
-      
       // Luo profiili
       const profileData = {
         uid: user.uid,
@@ -76,7 +72,6 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
         ageGroup: calculateAgeGroup(user.age),
         deviceFingerprint: deviceFingerprint,
         termsAccepted: true,
-        backgroundMusic: profile.backgroundMusic,
         createdAt: new Date(),
         lastActive: new Date()
       };
@@ -182,7 +177,8 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
             </div>
           </div>
 
-          {/* Musiikkivalinta */}
+          {/* Käyttöehtojen hyväksyminen */}
+                    {/* Musiikkivalinta */}
           <div className="music-preference">
             <label className="music-checkbox-simple">
               <input
@@ -196,24 +192,9 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
             </label>
           </div>
 
-          {/* Käyttöehtojen hyväksyminen */}
-          <div className="terms-preference">
-            <label className="music-checkbox-simple">
-              <input
-                type="checkbox"
-                name="acceptTerms"
-                checked={profile.acceptTerms || false}
-                onChange={handleInputChange}
-                required
-              />
-              <span className="checkmark"></span>
-              Hyväksyn käyttöehdot
-            </label>
-          </div>
-
           <button 
             type="submit" 
-            disabled={saving || !profile.acceptTerms}
+            disabled={saving}
             className="submit-btn"
           >
             {saving ? 'Tallennetaan...' : '🚀 Aloita chatit!'}
