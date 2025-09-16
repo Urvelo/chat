@@ -328,39 +328,69 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
           console.log('📊 Kategoriat:', result.categories);
           console.log('📈 Pisteet:', result.category_scores);
           
-          // TIUKAT KRITEERIT - tarkista pisteet suoraan
+          // ÄÄRIMMÄISEN HERKÄT KRITEERIT - estää kaiken epäilyttävän
           const scores = result.category_scores;
           let blocked = false;
           let reason = [];
           
-          // SEKSUAALINEN sisältö: raja 0.15 (alkuperäinen ~0.9)
-          if (scores.sexual > 0.15) {
+          // SEKSUAALINEN sisältö: raja 0.01 (1% = esto)
+          if (scores.sexual > 0.01) {
             blocked = true;
             reason.push(`seksuaalinen sisältö (${(scores.sexual * 100).toFixed(1)}%)`);
           }
           
-          // HÄIRINTÄ: raja 0.2 (alkuperäinen ~0.8)
-          if (scores.harassment > 0.2) {
+          // HÄIRINTÄ: raja 0.005 (0.5% = esto)
+          if (scores.harassment > 0.005) {
             blocked = true;
             reason.push(`häirintä (${(scores.harassment * 100).toFixed(1)}%)`);
           }
           
-          // VÄKIVALTA: raja 0.1 (alkuperäinen ~0.7)
-          if (scores.violence > 0.1) {
+          // VÄKIVALTA: raja 0.005 (0.5% = esto)
+          if (scores.violence > 0.005) {
             blocked = true;
             reason.push(`väkivalta (${(scores.violence * 100).toFixed(1)}%)`);
           }
           
-          // ITSENSÄ VAHINGOITTAMINEN: raja 0.2
-          if (scores['self-harm'] > 0.2) {
+          // ITSENSÄ VAHINGOITTAMINEN: raja 0.005 (0.5% = esto)
+          if (scores['self-harm'] > 0.005) {
             blocked = true;
             reason.push(`itsensä vahingoittaminen (${(scores['self-harm'] * 100).toFixed(1)}%)`);
           }
           
-          // VIHAPUHE: raja 0.15
-          if (scores.hate > 0.15) {
+          // VIHAPUHE: raja 0.005 (0.5% = esto)
+          if (scores.hate > 0.005) {
             blocked = true;
             reason.push(`vihapuhe (${(scores.hate * 100).toFixed(1)}%)`);
+          }
+          
+          // HÄIRINTÄ/UHKAILU: raja 0.001 (0.1% = esto)
+          if (scores['harassment/threatening'] > 0.001) {
+            blocked = true;
+            reason.push(`uhkaava häirintä (${(scores['harassment/threatening'] * 100).toFixed(1)}%)`);
+          }
+          
+          // VIHAPUHE/UHKAILU: raja 0.001 (0.1% = esto)
+          if (scores['hate/threatening'] > 0.001) {
+            blocked = true;
+            reason.push(`uhkaava vihapuhe (${(scores['hate/threatening'] * 100).toFixed(1)}%)`);
+          }
+          
+          // VÄKIVALTA/GRAAFINEN: raja 0.001 (0.1% = esto)
+          if (scores['violence/graphic'] > 0.001) {
+            blocked = true;
+            reason.push(`graafinen väkivalta (${(scores['violence/graphic'] * 100).toFixed(1)}%)`);
+          }
+          
+          // ITSENSÄ VAHINGOITTAMINEN/OHJEET: raja 0.001 (0.1% = esto)
+          if (scores['self-harm/instructions'] > 0.001) {
+            blocked = true;
+            reason.push(`itsensä vahingoittamisen ohjeet (${(scores['self-harm/instructions'] * 100).toFixed(1)}%)`);
+          }
+          
+          // ITSENSÄ VAHINGOITTAMINEN/AIKOMUS: raja 0.001 (0.1% = esto)
+          if (scores['self-harm/intent'] > 0.001) {
+            blocked = true;
+            reason.push(`itsensä vahingoittamisen aikomus (${(scores['self-harm/intent'] * 100).toFixed(1)}%)`);
           }
           
           // Jos ylittää jonkin rajan tai alkuperäinen flagged
