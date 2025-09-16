@@ -257,7 +257,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       // Luo unique filename
       const fileExtension = file.name.split('.').pop();
       const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExtension}`;
-      const filePath = `chat-files/${roomId}/${fileName}`;
+  const filePath = `chat-files/${roomId}/${fileName}`;
       
       // Upload tiedosto Firebase Storage:een
       const storageRef = ref(storage, filePath);
@@ -300,6 +300,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         fileSize: file.size,
         fileType: file.type,
         isImage: isImage,
+        storagePath: filePath,
         senderId: user.uid,
         senderName: profile.displayName,
         timestamp: serverTimestamp(),
@@ -409,6 +410,31 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         }
       }
       
+      // Poista kaikki viestit (ja niihin liittyvät tiedostot) ennen huoneen poistamista
+      try {
+        const msgsSnap = await getDocs(collection(db, 'rooms', roomId, 'messages'));
+        for (const msgDoc of msgsSnap.docs) {
+          const data = msgDoc.data();
+          // Jos viesti sisälsi tiedoston, yritä poistaa myös Storage:sta
+          if (data.type === 'file' && data.storagePath) {
+            try {
+              await deleteObject(ref(storage, data.storagePath));
+              console.log('🧹 Poistettu tallennettu tiedosto:', data.storagePath);
+            } catch (fileErr) {
+              console.warn('⚠️ Tiedoston poisto epäonnistui (jatketaan):', fileErr?.message || fileErr);
+            }
+          }
+          try {
+            await deleteDoc(doc(db, 'rooms', roomId, 'messages', msgDoc.id));
+          } catch (msgErr) {
+            console.warn('⚠️ Viestin poisto epäonnistui (jatketaan):', msgErr?.message || msgErr);
+          }
+        }
+        console.log('🧹 Viestit siivottu');
+      } catch (msgsErr) {
+        console.warn('⚠️ Viestien siivous epäonnistui (jatketaan):', msgsErr?.message || msgsErr);
+      }
+
       // Poista huone kokonaan - ei säilytetä historiaa
       try {
         await deleteDoc(doc(db, 'rooms', roomId));
