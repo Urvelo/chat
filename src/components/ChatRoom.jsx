@@ -298,7 +298,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     }
   };
 
-  // Ilmoita käyttäjä (3 ilmoitusta = banni)
+  // Ilmoita käyttäjä (porrastettu bänni: 3 ilmoitusta = temp bänni, 3 temp bänniä = ikuinen)
   const reportUser = async () => {
     try {
       if (!otherUser?.uid) {
@@ -319,28 +319,78 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       
       const currentProfile = profileSnap.data();
       const currentReports = currentProfile.reports || 0;
+      const banHistory = currentProfile.banHistory || [];
       const newReportCount = currentReports + 1;
       
-      // Päivitä ilmoitusten määrä
-      await updateDoc(profileRef, {
+      let updateData = {
         reports: newReportCount,
-        lastReported: new Date(),
-        // Jos 3+ ilmoitusta, merkitse bannatuksi
-        ...(newReportCount >= 3 ? { 
-          banned: true, 
-          bannedAt: new Date(),
-          bannedReason: `Automaattinen banni: ${newReportCount} ilmoitusta`
-        } : {})
-      });
+        lastReported: new Date()
+      };
       
+      let alertMessage = '';
+      let shouldLeave = false;
+      
+      // Tarkista onko jo ikuisesti bannattu
+      if (currentProfile.banned) {
+        alert('Käyttäjä on jo bannattu ikuisesti.');
+        return;
+      }
+      
+      // Jos 3+ ilmoitusta, anna bänni
+      if (newReportCount >= 3) {
+        const tempBanCount = banHistory.filter(ban => ban.type === 'temporary').length;
+        
+        if (tempBanCount >= 2) {
+          // Kolmas temp-bänni = ikuinen bänni
+          updateData.banned = true;
+          updateData.bannedAt = new Date();
+          updateData.bannedReason = `Ikuinen bänni: ${tempBanCount + 1} väliaikaista bänniä`;
+          updateData.banHistory = [...banHistory, {
+            type: 'permanent',
+            reason: `${newReportCount} ilmoitusta (kolmas temp-bänni)`,
+            createdAt: new Date(),
+            reportCount: newReportCount
+          }];
+          
+          alertMessage = `Käyttäjä on bannattu ikuisesti (${tempBanCount + 1}. väliaikainen bänni). Kiitos ilmoituksesta!`;
+          shouldLeave = true;
+        } else {
+          // Ensimmäinen tai toinen temp-bänni (24h)
+          const tempBanEnd = new Date();
+          tempBanEnd.setHours(tempBanEnd.getHours() + 24);
+          
+          updateData.temporaryBan = {
+            active: true,
+            bannedAt: new Date(),
+            bannedUntil: tempBanEnd,
+            reason: `${newReportCount} ilmoitusta`
+          };
+          updateData.banHistory = [...banHistory, {
+            type: 'temporary',
+            reason: `${newReportCount} ilmoitusta`,
+            createdAt: new Date(),
+            expiresAt: tempBanEnd,
+            reportCount: newReportCount
+          }];
+          updateData.reports = 0; // Nollaa ilmoitukset temp-bännin jälkeen
+          
+          alertMessage = `Käyttäjä on bannattu 24 tunniksi (${tempBanCount + 1}. väliaikainen bänni). Kiitos ilmoituksesta!`;
+          shouldLeave = true;
+        }
+      } else {
+        alertMessage = `Käyttäjä ilmoitettu (${newReportCount}/3). Kiitos ilmoituksesta!`;
+      }
+      
+      // Päivitä profiili
+      await updateDoc(profileRef, updateData);
       console.log(`✅ Käyttäjä ilmoitettu (${newReportCount}/3 ilmoitusta)`);
       
-      if (newReportCount >= 3) {
-        alert(`Käyttäjä on bannattu ${newReportCount} ilmoituksen jälkeen. Kiitos ilmoituksesta!`);
+      alert(alertMessage);
+      
+      if (shouldLeave) {
         // Poistu huoneesta automaattisesti
         leaveRoom();
       } else {
-        alert(`Käyttäjä ilmoitettu (${newReportCount}/3). Kiitos ilmoituksesta!`);
         setShowReportMenu(false);
       }
       
@@ -367,6 +417,28 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
           console.log("↩️ Toinen käyttäjä palautettu waiting-listaan");
         } catch (error) {
           console.error("❌ Virhe toisen käyttäjän palauttamisessa:", error);
+        }
+      }
+      
+      // Jos huone on valmis ja toinen käyttäjä on yhä paikalla, lähetä "chat päättynyt" -viesti
+      if (roomReady && otherUser && roomData.users?.includes(otherUser.uid)) {
+        try {
+          const leaveMessage = {
+            id: 'leave_' + Date.now(),
+            senderId: 'system',
+            senderName: 'Järjestelmä',
+            text: `${user.displayName} poistui chatista. Chat on päättynyt. Voit nyt etsiä uuden keskustelukumppanin.`,
+            timestamp: serverTimestamp(),
+            type: 'system'
+          };
+          
+          await setDoc(doc(db, 'rooms', roomId, 'messages', leaveMessage.id), leaveMessage);
+          console.log("📤 Lähetettiin 'chat päättynyt' -viesti toiselle käyttäjälle");
+          
+          // Odota hetki että viesti ehtii perille
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (error) {
+          console.error("❌ Virhe päättymis-viestin lähettämisessä:", error);
         }
       }
       
@@ -520,6 +592,25 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
           </div>
         ) : (
           messages.map((message, index) => {
+            if (!message || !message.text) return null;
+            
+            // System-viestit erityiskäsittely
+            if (message.type === 'system') {
+              return (
+                <div key={message.id} className="message-wrapper system">
+                  <div className="message system">
+                    <div className="message-content">
+                      {message.text}
+                    </div>
+                    <div className="message-time">
+                      {formatTime(message.timestamp)}
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+            
+            // Normaalit käyttäjäviestit
             const isOwn = message.senderId === user.uid;
             const showAvatar = !isOwn && (index === 0 || messages[index - 1]?.senderId !== message.senderId);
             

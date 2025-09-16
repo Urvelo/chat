@@ -219,15 +219,37 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
   // Aloita käyttäjien etsintä
   const startSearching = async () => {
     try {
-      // Tarkista onko käyttäjä bannattu
+      // Tarkista onko käyttäjä bannattu tai temp-bannattu
       const profileRef = doc(db, 'profiles', user.uid);
       const profileSnap = await getDoc(profileRef);
       
       if (profileSnap.exists()) {
         const profileData = profileSnap.data();
+        
+        // Tarkista ikuinen bänni
         if (profileData.banned) {
           alert('Et voi käyttää palvelua. Syy: ' + (profileData.bannedReason || 'Käyttöehtojen rikkominen'));
           return;
+        }
+        
+        // Tarkista väliaikainen bänni
+        if (profileData.temporaryBan?.active) {
+          const bannedUntil = profileData.temporaryBan.bannedUntil.toDate ? 
+            profileData.temporaryBan.bannedUntil.toDate() : 
+            new Date(profileData.temporaryBan.bannedUntil);
+          
+          if (new Date() < bannedUntil) {
+            // Temp-bänni on vielä voimassa
+            const timeLeft = Math.ceil((bannedUntil - new Date()) / (1000 * 60 * 60)); // tunnit
+            alert(`Et voi käyttää palvelua vielä ${timeLeft} tuntia. Syy: ${profileData.temporaryBan.reason}`);
+            return;
+          } else {
+            // Temp-bänni on vanhentunut, poista se
+            console.log("🔓 Väliaikainen bänni vanhentunut, poistetaan");
+            await updateDoc(profileRef, {
+              'temporaryBan.active': false
+            });
+          }
         }
       }
       

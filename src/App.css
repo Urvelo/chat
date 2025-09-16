@@ -1006,6 +1006,18 @@ html, body {
   margin-right: 2rem;
 }
 
+.message.system {
+  background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%);
+  color: #cccccc;
+  border: 1px solid #555555;
+  border-radius: 12px;
+  margin: 0.5rem 1rem;
+  text-align: center;
+  font-style: italic;
+  font-size: 0.9rem;
+  max-width: 90%;
+}
+
 .message-content {
   margin: 0;
   line-height: 1.5;
