@@ -445,9 +445,6 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       <div className="chat-container">
         <div className="chat-header">
           <div className="chat-header-info">
-            <div className="chat-avatar">
-              {otherUser?.displayName?.charAt(0)?.toUpperCase() || '👤'}
-            </div>
             <div className="chat-user-info">
               <h3>{otherUser?.displayName || 'Tuntematon'}</h3>
               <p>Yhdistämässä...</p>
@@ -475,9 +472,6 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       {/* WhatsApp/Snapchat-tyylinen header */}
       <div className="chat-header">
         <div className="chat-header-info">
-          <div className="chat-avatar">
-            {otherUser?.displayName?.charAt(0)?.toUpperCase() || '👤'}
-          </div>
           <div className="chat-user-info">
             <h3>{otherUser?.displayName || 'Tuntematon'}</h3>
             <p>online nyt</p>
