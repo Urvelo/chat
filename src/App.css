@@ -824,13 +824,16 @@ html, body {
   /* Desktop chat input adjustments */
   .chat-input-container {
     padding: 1.5rem 2rem;
-    /* Seuraa chat-containerin kokoa desktopissa */
-    position: relative;
-    bottom: auto;
-    left: auto;
-    right: auto;
+    /* Kiinteä positio desktopissa, mutta chat-containerin sisällä */
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
     width: 100%;
     max-width: none;
+    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+    border-top: 1px solid #333333;
+    z-index: 100;
   }
 
   .chat-input {
@@ -1060,7 +1063,8 @@ html, body {
   overflow-y: auto;
   overflow-x: hidden;
   padding: 1rem;
-  padding-bottom: 120px; /* Tilaa fixed input-containerille */
+  padding-bottom: 140px; /* Lisää tilaa input-containerille */
+  min-height: calc(100vh - 200px); /* Varmistaa että on tarpeeksi korkeutta */
   display: flex;
   flex-direction: column;
   gap: 0.8rem;
@@ -1164,8 +1168,7 @@ html, body {
   padding: 1.2rem 1.5rem;
   backdrop-filter: blur(10px);
   position: fixed;
-  bottom: 0;
-  bottom: env(safe-area-inset-bottom); /* iOS safe area */
+  bottom: env(safe-area-inset-bottom, 0); /* iOS safe area, fallback 0 */
   left: 0;
   right: 0;
   width: 100%;
