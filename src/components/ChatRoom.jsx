@@ -263,10 +263,13 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       // Luo unique filename
       const fileExtension = file.name.split('.').pop();
       const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExtension}`;
-  const filePath = `chat-files/${roomId}/${fileName}`;
+      const filePath = `chat-files/${roomId}/${fileName}`;
       
       // Upload tiedosto Firebase Storage:een
       const storageRef = ref(storage, filePath);
+      
+      console.log("📤 Aloitetaan upload:", filePath);
+      
       const uploadResult = await uploadBytes(storageRef, file);
       
       console.log("✅ Tiedosto ladattu:", uploadResult.metadata.fullPath);
@@ -319,7 +322,21 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       
     } catch (error) {
       console.error('❌ Virhe tiedoston lähettämisessä:', error);
-      alert('Tiedoston lähetys epäonnistui. Yritä uudelleen.');
+      
+      // Specific error handling for Firebase Storage
+      if (error.code === 'storage/unauthorized') {
+        alert('Tiedoston lataus estetty. Tarkista että Firebase Storage on konfiguroitu oikein.');
+      } else if (error.code === 'storage/bucket-not-found') {
+        alert('Firebase Storage bucket ei löydy. Ota yhteyttä ylläpitoon.');
+      } else if (error.code === 'storage/quota-exceeded') {
+        alert('Tallennustila täynnä. Yritä pienemmällä tiedostolla.');
+      } else if (error.code === 'storage/retry-limit-exceeded') {
+        alert('Verkkovirhe. Tarkista internetyhteys ja yritä uudelleen.');
+      } else if (error.message && error.message.includes('CORS')) {
+        alert('Verkko-ongelma. Tiedoston lataus ei onnistunut. Yritä hetken päästä uudelleen.');
+      } else {
+        alert('Tiedoston lähetys epäonnistui. Yritä uudelleen.');
+      }
     } finally {
       setUploading(false);
       // Tyhjennä file input
