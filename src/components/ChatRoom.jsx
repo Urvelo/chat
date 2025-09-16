@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, getDoc, deleteDoc, setDoc, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { smartModerationService } from '../utils/smart-moderation.js';
-import moderationService from '../utils/moderation.js'; // OpenAI API moderointi
+// Firebase Functions moderointi poistettu - käytetään vain offline-moderointia
 import FeedbackModal from './FeedbackModal';
 
 const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
@@ -138,38 +138,29 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         ...doc.data()
       }));
       
-      // 🤖 OpenAI API MODEROINTI - Tarkista uudet viestit
+      // 🛡️ OFFLINE MODEROINTI - Tarkista uudet viestit
       if (messageList.length > 0) {
         for (const message of messageList) {
           // Tarkista vain viestit jotka eivät ole omia ja joita ei ole vielä moderoitu
           if (message.senderId !== user?.uid && !message.moderationChecked) {
             try {
-              console.log(`🔍 OpenAI API moderoi viestiä: "${message.text}"`);
+              console.log(`🧠 Offline-moderoi viestiä: "${message.text}"`);
               
-              const moderationResult = await moderationService.moderateTextSafe(
+              const moderationResult = await smartModerationService.moderateMessage(
                 message.text, 
                 message.senderId
               );
               
-              console.log('📊 OpenAI moderation tulos:', moderationResult);
+              console.log('📊 Offline moderation tulos:', moderationResult);
               
               // Jos viesti on haitallinen, merkitse se
               if (moderationResult.isHarmful) {
                 console.log(`⚠️ HAITALLINEN VIESTI HAVAITTU: ${message.text}`);
-                // Voit lisätä tähän toimenpiteitä, esim:
-                // - Piilota viesti
-                // - Raportoi moderaattoreille  
-                // - Merkitse käyttäjä epäilyttäväksi
+                // Offline-moderointi toimii, mutta ei tarvitse tallentaa Firestoreen
               }
               
-              // Merkitse viesti moderoiduksi (valinnainen)
-              // await updateDoc(doc(db, 'rooms', roomId, 'messages', message.id), {
-              //   moderationChecked: true,
-              //   moderationResult: moderationResult
-              // });
-              
             } catch (error) {
-              console.error('❌ Virhe OpenAI moderoinnissa:', error);
+              console.error('❌ Virhe offline-moderoinnissa:', error);
             }
           }
         }
