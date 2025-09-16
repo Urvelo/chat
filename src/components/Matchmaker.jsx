@@ -103,6 +103,25 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
     };
   }, []);
 
+  // Aloita musiikki automaattisesti oletuksena
+  useEffect(() => {
+    // Tarkista ettei musiikki ole kielletty
+    if (localStorage.getItem("playMusic") !== "false") {
+      // Varmista ettei musiikki jo soi
+      if (!window.backgroundMusic) {
+        const audio = new Audio('/meditation-relaxing-music-293922.mp3');
+        audio.volume = 0.15;
+        audio.loop = true;
+        
+        audio.play().catch(error => {
+          console.log("Automaattinen musiikki estetty selaimessa:", error);
+        });
+        
+        window.backgroundMusic = audio;
+      }
+    }
+  }, []);
+
   // Kuuntele olemassa olevia huoneita joissa käyttäjä on mukana - korjattu versio
   useEffect(() => {
     if (!user?.uid || !isSearching) return;
@@ -422,7 +441,7 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
               <label className="music-checkbox">
                 <input 
                   type="checkbox" 
-                  checked={localStorage.getItem("playMusic") === "true"}
+                  checked={localStorage.getItem("playMusic") !== "false"}
                   onChange={(e) => {
                     localStorage.setItem("playMusic", e.target.checked);
                     
