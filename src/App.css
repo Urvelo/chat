@@ -38,6 +38,22 @@ body {
   align-items: stretch;
 }
 
+/* Desktop chat - koko näyttö ilman marginaaleja */
+@media (min-width: 1025px) {
+  .app-main.chat-main {
+    padding: 0;
+    margin: 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1000;
+  }
+}
+
 /* Varmista että muut näkymät scrollaavat normaalisti */
 .app-container {
   min-height: 100vh;
