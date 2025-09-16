@@ -841,18 +841,6 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         </form>
       </div>
 
-      {/* Käyttöehdot - kiinteä linkki alareunassa */}
-      <div className="terms-footer">
-        <a 
-          href="/terms" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="terms-link"
-        >
-          📋 Käyttöehdot ja tietosuoja
-        </a>
-      </div>
-
       {/* Feedback Modal */}
       <FeedbackModal 
         isOpen={showFeedbackModal} 

@@ -5,7 +5,8 @@ import { getCachedFingerprint } from '../utils/fingerprint';
 const ProfileSetup = ({ user, onProfileComplete }) => {
   const [profile, setProfile] = useState({
     termsAccepted: false,
-    backgroundMusic: true // Oletuksena päälle
+    backgroundMusic: true, // Oletuksena päälle
+    acceptTerms: false // Käyttöehdot pitää hyväksyä
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -195,9 +196,24 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
             </label>
           </div>
 
+          {/* Käyttöehtojen hyväksyminen */}
+          <div className="terms-preference">
+            <label className="music-checkbox-simple">
+              <input
+                type="checkbox"
+                name="acceptTerms"
+                checked={profile.acceptTerms || false}
+                onChange={handleInputChange}
+                required
+              />
+              <span className="checkmark"></span>
+              Hyväksyn <a href="/terms" target="_blank" rel="noopener noreferrer">käyttöehdot ja tietosuojakäytännön</a>
+            </label>
+          </div>
+
           <button 
             type="submit" 
-            disabled={saving}
+            disabled={saving || !profile.acceptTerms}
             className="submit-btn"
           >
             {saving ? 'Tallennetaan...' : '🚀 Aloita chatit!'}
