@@ -1,7 +1,6 @@
 // Siivoustyökalut datan minimoimiseksi
 import { collection, query, where, getDocs, deleteDoc, doc, serverTimestamp, addDoc, setDoc } from 'firebase/firestore';
-import { ref, deleteObject } from 'firebase/storage';
-import { db, storage } from '../firebase';
+import { db } from '../firebase';
 
 class CleanupService {
   constructor() {
@@ -56,18 +55,6 @@ class CleanupService {
       const msgsSnap = await getDocs(collection(db, 'rooms', roomId, 'messages'));
       
       for (const msgDoc of msgsSnap.docs) {
-        const data = msgDoc.data();
-        
-        // Jos viesti sisälsi tiedoston, poista Storage:sta
-        if (data.type === 'file' && data.storagePath) {
-          try {
-            await deleteObject(ref(storage, data.storagePath));
-            console.log(`📁 Poistettu tiedosto: ${data.storagePath}`);
-          } catch (fileErr) {
-            console.warn(`⚠️ Tiedoston poisto epäonnistui: ${fileErr?.message}`);
-          }
-        }
-        
         // Poista viesti
         await deleteDoc(doc(db, 'rooms', roomId, 'messages', msgDoc.id));
       }
