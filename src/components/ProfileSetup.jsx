@@ -101,7 +101,7 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
   return (
     <div className="profile-setup-container">
       <div className="profile-form">
-        <h2>📝 Viimeistele profiilisi</h2>
+        <h2>� Käyttöehdot</h2>
         <p>Hyväksy käyttöehdot aloittaaksesi chatit.</p>
 
         {error && <div className="error-message">{error}</div>}
