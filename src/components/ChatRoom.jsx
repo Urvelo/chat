@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, getDoc, deleteDoc, setDoc, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { smartModerationService } from '../utils/smart-moderation.js';
+import moderationService from '../utils/moderation.js'; // OpenAI API moderointi
 import FeedbackModal from './FeedbackModal';
 
 const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
@@ -130,12 +131,50 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       orderBy('timestamp', 'asc')
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
       console.log("Viestejä löytyi:", snapshot.size);
       const messageList = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+      
+      // 🤖 OpenAI API MODEROINTI - Tarkista uudet viestit
+      if (messageList.length > 0) {
+        for (const message of messageList) {
+          // Tarkista vain viestit jotka eivät ole omia ja joita ei ole vielä moderoitu
+          if (message.senderId !== user?.uid && !message.moderationChecked) {
+            try {
+              console.log(`🔍 OpenAI API moderoi viestiä: "${message.text}"`);
+              
+              const moderationResult = await moderationService.moderateTextSafe(
+                message.text, 
+                message.senderId
+              );
+              
+              console.log('📊 OpenAI moderation tulos:', moderationResult);
+              
+              // Jos viesti on haitallinen, merkitse se
+              if (moderationResult.isHarmful) {
+                console.log(`⚠️ HAITALLINEN VIESTI HAVAITTU: ${message.text}`);
+                // Voit lisätä tähän toimenpiteitä, esim:
+                // - Piilota viesti
+                // - Raportoi moderaattoreille  
+                // - Merkitse käyttäjä epäilyttäväksi
+              }
+              
+              // Merkitse viesti moderoiduksi (valinnainen)
+              // await updateDoc(doc(db, 'rooms', roomId, 'messages', message.id), {
+              //   moderationChecked: true,
+              //   moderationResult: moderationResult
+              // });
+              
+            } catch (error) {
+              console.error('❌ Virhe OpenAI moderoinnissa:', error);
+            }
+          }
+        }
+      }
+      
       setMessages(messageList);
       setLoading(false);
     }, (error) => {

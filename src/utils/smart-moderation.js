@@ -57,10 +57,12 @@ class SmartModerationService {
       /alastonkuv/i,
       
       // Uhkailu ja väkivalta
-      /tapan.*sut/i,
+      /tapan.*s(ut|inut)/i,
       /lyön.*sua/i,
       /tule.*tänne.*tai/i,
       /jos.*et.*niin/i,
+      /kuole.*pois/i,
+      /vittu.*kuole/i,
       
       // Kiusaaminen
       /vitun.*idiootti/i,
@@ -221,7 +223,7 @@ class SmartModerationService {
   categorizeHarm(pattern) {
     const patternStr = pattern.toString();
     
-    if (patternStr.includes('tapan|lyön|tule.*tänne')) return 'violence';
+    if (patternStr.includes('tapan|lyön|tule.*tänne|kuole.*pois|vittu.*kuole')) return 'violence';
     if (patternStr.includes('vitun|kuole|ruma')) return 'bullying';
     if (patternStr.includes('kuva|näytä|tissikuv')) return 'sexual';
     
