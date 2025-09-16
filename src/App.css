@@ -284,50 +284,28 @@ body {
   border-color: #333333;
 }
 
-/* Musiikkivalinta ProfileSetupissa */
+/* Musiikkivalinta ProfileSetupissa - yksinkertainen versio */
 .music-preference {
-  margin: 2rem 0;
-  padding: 1.5rem;
-  background: #1a1a1a;
-  border: 1px solid #333333;
-  border-radius: 8px;
+  margin: 1.5rem 0;
 }
 
-.music-preference h3 {
-  color: #ffffff;
-  margin-bottom: 1rem;
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-.music-preference .music-checkbox {
+.music-checkbox-simple {
   display: inline-flex;
   align-items: center;
   cursor: pointer;
   font-size: 1rem;
   color: #ffffff;
   gap: 0.8rem;
-  padding: 1rem;
-  border: 1px solid #333333;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
-  transition: all 0.2s ease;
   user-select: none;
-  width: 100%;
 }
 
-.music-preference .music-checkbox:hover {
-  border-color: #66ccff;
-  background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%);
-}
-
-.music-preference .music-checkbox input[type="checkbox"] {
+.music-checkbox-simple input[type="checkbox"] {
   display: none;
 }
 
-.music-preference .music-checkbox .checkmark {
-  width: 20px;
-  height: 20px;
+.music-checkbox-simple .checkmark {
+  width: 18px;
+  height: 18px;
   border: 2px solid #666666;
   border-radius: 4px;
   display: flex;
@@ -337,16 +315,16 @@ body {
   flex-shrink: 0;
 }
 
-.music-preference .music-checkbox input[type="checkbox"]:checked + .checkmark {
+.music-checkbox-simple input[type="checkbox"]:checked + .checkmark {
   background: #66ccff;
   border-color: #66ccff;
 }
 
-.music-preference .music-checkbox input[type="checkbox"]:checked + .checkmark::after {
+.music-checkbox-simple input[type="checkbox"]:checked + .checkmark::after {
   content: "✓";
   color: #000000;
   font-weight: bold;
-  font-size: 14px;
+  font-size: 12px;
 }
 
 /* Checkbox */
@@ -1081,6 +1059,8 @@ html, body {
   gap: 0.8rem;
   position: relative;
   -webkit-overflow-scrolling: touch;
+  /* Varmistetaan että scrollaus toimii oikein */
+  scroll-behavior: smooth;
 }
 
 .empty-chat {
@@ -1178,12 +1158,15 @@ html, body {
   backdrop-filter: blur(10px);
   position: fixed;
   bottom: 0;
+  bottom: env(safe-area-inset-bottom); /* iOS safe area */
   left: 0;
   right: 0;
   width: 100%;
   z-index: 1000;
   flex-shrink: 0; /* Estää kutistumisen näppäimistön kanssa */
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.5);
+  /* Näppäimistösuojaus */
+  transform: translateZ(0); /* Force hardware acceleration */
 }
 
 .chat-input-form {

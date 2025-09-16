@@ -183,8 +183,7 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
 
           {/* Musiikkivalinta */}
           <div className="music-preference">
-            <h3>🎵 Taustamusiikki</h3>
-            <label className="music-checkbox">
+            <label className="music-checkbox-simple">
               <input
                 type="checkbox"
                 name="backgroundMusic"
@@ -192,7 +191,7 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
                 onChange={handleInputChange}
               />
               <span className="checkmark"></span>
-              Soita rauhallista meditaatiomusiikkia taustalla
+              Haluatko taustamusiikkia?
             </label>
           </div>
 

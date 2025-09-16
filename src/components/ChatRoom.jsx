@@ -146,9 +146,20 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     return unsubscribe;
   }, [roomId, roomReady]);
 
-  // Automaattinen scroll uusimpiin viesteihin
+  // Automaattinen scroll uusimpiin viesteihin - parannettu versio
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Scroll aina kun tulee uusia viestejä
+    const scrollToBottom = () => {
+      messagesEndRef.current?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'end',
+        inline: 'nearest' 
+      });
+    };
+    
+    // Välitön scroll ja viive varmistus
+    scrollToBottom();
+    setTimeout(scrollToBottom, 100);
   }, [messages]);
 
     // Mobile keyboard handling - optimoitu versio
@@ -311,7 +322,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
 
   // Taustamusiikki ja ääniefektit
   useEffect(() => {
-    const playMusic = localStorage.getItem("playMusic") === "true";
+    const playMusic = localStorage.getItem("playMusic") !== "false"; // Oletuksena päälle
     
     if (playMusic && backgroundMusicRef.current) {
       backgroundMusicRef.current.volume = 0.15;
@@ -591,7 +602,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     <div className="chat-container">
       {/* Audio-elementit */}
       <audio ref={backgroundMusicRef} loop>
-        <source src="/rauhaisa_piano.mp3" type="audio/mpeg" />
+        <source src="/meditation-relaxing-music-293922.mp3" type="audio/mpeg" />
         Selaimesi ei tue ääntä.
       </audio>
       
