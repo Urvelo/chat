@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, getDoc, deleteDoc, setDoc, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, getDoc, deleteDoc, setDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
 import { smartModerationService } from '../utils/smart-moderation.js';
 // Firebase Functions moderointi poistettu - käytetään vain offline-moderointia
@@ -180,17 +180,16 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
   useEffect(() => {
     // Scroll aina kun tulee uusia viestejä, mutta jätä tilaa input-kentälle
     const scrollToBottom = () => {
-      if (messagesEndRef.current) {
-        // Laske input-kentän korkeus (noin 100px + padding)
-        const inputHeight = 120;
-        const targetPosition = messagesEndRef.current.offsetTop - inputHeight;
-        
-        // Scrollaa näkyviin mutta jätä tilaa input-kentälle
-        window.scrollTo({
-          top: Math.max(0, targetPosition),
-          behavior: 'smooth'
-        });
-      }
+      // Scrollaa dokumentin loppuun, mutta jätä tilaa fixed input-kentälle
+      const inputHeight = 120; // Input-kentän korkeus + padding
+      const documentHeight = document.documentElement.scrollHeight;
+      const windowHeight = window.innerHeight;
+      
+      // Scrollaa aivan pohjaan, mutta varmista että input pysyy näkyvissä
+      window.scrollTo({
+        top: documentHeight - windowHeight + inputHeight,
+        behavior: 'smooth'
+      });
     };
     
     // Välitön scroll ja viive varmistus
@@ -206,15 +205,15 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       // Debounce resize events
       clearTimeout(resizeTimeout);
       resizeTimeout = setTimeout(() => {
-        // Korjattu scrollaus joka jättää tilaa input-kentälle
-        if (messagesEndRef.current) {
-          const inputHeight = 120;
-          const targetPosition = messagesEndRef.current.offsetTop - inputHeight;
-          window.scrollTo({
-            top: Math.max(0, targetPosition),
-            behavior: 'smooth'
-          });
-        }
+        // Scrollaa dokumentin loppuun, ottaen huomioon input-kentän
+        const inputHeight = 120;
+        const documentHeight = document.documentElement.scrollHeight;
+        const windowHeight = window.innerHeight;
+        
+        window.scrollTo({
+          top: documentHeight - windowHeight + inputHeight,
+          behavior: 'smooth'
+        });
       }, 150);
     };
 
@@ -236,15 +235,15 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       // Scroll takaisin viesteihin kun poistetaan focus
       if (window.innerWidth <= 768) {
         setTimeout(() => {
-          // Korjattu scrollaus joka jättää tilaa input-kentälle
-          if (messagesEndRef.current) {
-            const inputHeight = 120;
-            const targetPosition = messagesEndRef.current.offsetTop - inputHeight;
-            window.scrollTo({
-              top: Math.max(0, targetPosition),
-              behavior: 'smooth'
-            });
-          }
+          // Scrollaa dokumentin loppuun kun blur
+          const inputHeight = 120;
+          const documentHeight = document.documentElement.scrollHeight;
+          const windowHeight = window.innerHeight;
+          
+          window.scrollTo({
+            top: documentHeight - windowHeight + inputHeight,
+            behavior: 'smooth'
+          });
         }, 200);
       }
     };
@@ -275,15 +274,15 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     if (window.innerWidth <= 768) {
       // Scroll bottom after keyboard shows - korjattu fixed input:lle
       setTimeout(() => {
-        // Scrollaa viestialue näkyviin, ottaen huomioon fixed input
-        if (messagesEndRef.current) {
-          const inputHeight = 120;
-          const targetPosition = messagesEndRef.current.offsetTop - inputHeight;
-          window.scrollTo({
-            top: Math.max(0, targetPosition),
-            behavior: 'smooth'
-          });
-        }
+        // Scrollaa dokumentin loppuun kun focus
+        const inputHeight = 120;
+        const documentHeight = document.documentElement.scrollHeight;
+        const windowHeight = window.innerHeight;
+        
+        window.scrollTo({
+          top: documentHeight - windowHeight + inputHeight,
+          behavior: 'smooth'
+        });
       }, 300); // Lisää aikaa näppäimistön avautumiselle
     }
   };
@@ -292,14 +291,15 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     // Palauta normaali scrollaus kun näppäimistö sulkeutuu
     if (window.innerWidth <= 768) {
       setTimeout(() => {
-        if (messagesEndRef.current) {
-          const inputHeight = 120;
-          const targetPosition = messagesEndRef.current.offsetTop - inputHeight;
-          window.scrollTo({
-            top: Math.max(0, targetPosition),
-            behavior: 'smooth'
-          });
-        }
+        // Scrollaa dokumentin loppuun kun blur
+        const inputHeight = 120;
+        const documentHeight = document.documentElement.scrollHeight;
+        const windowHeight = window.innerHeight;
+        
+        window.scrollTo({
+          top: documentHeight - windowHeight + inputHeight,
+          behavior: 'smooth'
+        });
       }, 100);
     }
   };
@@ -617,17 +617,31 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         }
       }
       
-      // Poista kaikki viestit ennen huoneen poistamista
+      // Poista kaikki viestit ennen huoneen poistamista - NOPEA BATCH-VERSIO
       try {
         const msgsSnap = await getDocs(collection(db, 'rooms', roomId, 'messages'));
-        for (const msgDoc of msgsSnap.docs) {
-          try {
-            await deleteDoc(doc(db, 'rooms', roomId, 'messages', msgDoc.id));
-          } catch (msgErr) {
-            console.warn('⚠️ Viestin poisto epäonnistui (jatketaan):', msgErr?.message || msgErr);
+        
+        if (msgsSnap.docs.length > 0) {
+          console.log(`🗑️ Poistetaan ${msgsSnap.docs.length} viestiä batch-operaatiolla...`);
+          
+          // Firestore batch voi poistaa max 500 dokumenttia kerralla
+          const batchSize = 500;
+          const docs = msgsSnap.docs;
+          
+          for (let i = 0; i < docs.length; i += batchSize) {
+            const batch = writeBatch(db);
+            const batchDocs = docs.slice(i, i + batchSize);
+            
+            batchDocs.forEach(msgDoc => {
+              batch.delete(doc(db, 'rooms', roomId, 'messages', msgDoc.id));
+            });
+            
+            await batch.commit();
+            console.log(`✅ Poistettu batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(docs.length/batchSize)}`);
           }
+          
+          console.log('🧹 Kaikki viestit siivottu nopeasti!');
         }
-        console.log('🧹 Viestit siivottu');
       } catch (msgsErr) {
         console.warn('⚠️ Viestien siivous epäonnistui (jatketaan):', msgsErr?.message || msgsErr);
       }
