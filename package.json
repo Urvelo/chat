@@ -1,8 +1,8 @@
 {
-  "name": "chat-nuorille",
+  "name": "secure-chat-app",
   "private": true,
   "version": "1.0.0",
-  "description": "🔥 ChatNest - Turvallinen satunnainen chat-sovellus Reactilla ja Firebasella",
+  "description": "Modern secure chat application",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,14 +12,11 @@
   },
   "keywords": [
     "chat",
-    "react",
-    "firebase",
-    "omegle",
-    "random-chat",
-    "secure-chat"
+    "secure",
+    "react"
   ],
-  "author": "ChatNest Team",
-  "license": "MIT",
+  "author": "Private",
+  "license": "Private",
   "dependencies": {
     "fingerprintjs2": "^2.1.4",
     "firebase": "^12.2.1",
@@ -37,10 +34,5 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.3.0",
     "vite": "^7.1.2"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/username/chatnest.git"
-  },
-  "homepage": "https://chatnest.vercel.app"
+  }
 }
