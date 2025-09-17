@@ -13,9 +13,12 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
   const [waitingForOther, setWaitingForOther] = useState(true);
   const [showReportMenu, setShowReportMenu] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [otherUserTyping, setOtherUserTyping] = useState(false);
   const messagesEndRef = useRef(null);
   const backgroundMusicRef = useRef(null);
   const joinSoundRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
   // Hae toisen käyttäjän tiedot - memoized ja turvallinen
   const otherUser = useMemo(() => {
@@ -180,6 +183,28 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     return unsubscribe;
   }, [roomId, roomReady]);
 
+  // Kuuntele typing-indikaattoreita
+  useEffect(() => {
+    if (!roomId || !roomReady || !user?.uid) return;
+
+    const roomRef = doc(db, 'rooms', roomId);
+    const unsubscribe = onSnapshot(roomRef, (doc) => {
+      if (doc.exists()) {
+        const roomData = doc.data();
+        const typingUsers = roomData.typingUsers || {};
+        
+        // Tarkista onko joku muu kirjoittamassa (ei itse)
+        const otherUsersTyping = Object.entries(typingUsers)
+          .filter(([userId, isTyping]) => userId !== user.uid && isTyping)
+          .length > 0;
+        
+        setOtherUserTyping(otherUsersTyping);
+      }
+    });
+
+    return unsubscribe;
+  }, [roomId, roomReady, user?.uid]);
+
   // Optimoitu scrollaus-funktio
   const scrollToBottom = useCallback(() => {
     // Yksinkertainen mobiili-ratkaisu
@@ -273,6 +298,43 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       setTimeout(scrollToBottom, 300); // Lisää aikaa näppäimistön avautumiselle
     }
   }, [scrollToBottom]);
+
+  // Typing-indikaattorin päivitys
+  const updateTypingStatus = useCallback(async (isTyping) => {
+    if (!roomId || !user?.uid) return;
+    
+    try {
+      const roomRef = doc(db, 'rooms', roomId);
+      await updateDoc(roomRef, {
+        [`typingUsers.${user.uid}`]: isTyping
+      });
+    } catch (error) {
+      console.error("❌ Virhe typing-statuksen päivityksessä:", error);
+    }
+  }, [roomId, user?.uid]);
+
+  // Input-muutosten käsittely
+  const handleInputChange = useCallback((e) => {
+    const value = e.target.value;
+    setNewMessage(value);
+    
+    // Typing-indikaattorin logiikka
+    if (value.trim() && !isTyping) {
+      setIsTyping(true);
+      updateTypingStatus(true);
+    }
+    
+    // Nollaa timeout jos on olemassa
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    
+    // Aseta uusi timeout joka lopettaa typing-statuksen
+    typingTimeoutRef.current = setTimeout(() => {
+      setIsTyping(false);
+      updateTypingStatus(false);
+    }, 1000); // 1 sekunnin kuluttua lopettaa typing
+  }, [isTyping, updateTypingStatus]);
 
   const handleInputBlur = useCallback(() => {
     // Palauta normaali scrollaus kun näppäimistö sulkeutuu
@@ -391,6 +453,14 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       await addDoc(collection(db, 'rooms', roomId, 'messages'), messageData);
       setNewMessage('');
       
+      // Nollaa typing-status viestin lähettämisen jälkeen
+      setIsTyping(false);
+      updateTypingStatus(false);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+      
       console.log("Viesti lähetetty onnistuneesti");
 
     } catch (error) {
@@ -410,6 +480,14 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
 
         await addDoc(collection(db, 'rooms', roomId, 'messages'), messageData);
         setNewMessage('');
+        
+        // Nollaa typing-status fallback-tapauksessakin
+        setIsTyping(false);
+        updateTypingStatus(false);
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+          typingTimeoutRef.current = null;
+        }
       }
     }
   }, [newMessage, roomReady, user.uid, profile.displayName, roomId]);
@@ -441,6 +519,19 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       }
     };
   }, [roomReady]); // Suorita kun roomReady muuttuu
+
+  // Cleanup typing-indikaattori komponenttia poistettaessa
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      // Nollaa typing-status kun komponentti poistuu
+      if (roomId && user?.uid) {
+        updateTypingStatus(false);
+      }
+    };
+  }, [roomId, user?.uid, updateTypingStatus]);
 
   // Ilmoita käyttäjä (porrastettu bänni: 4 ilmoitusta = temp bänni, 3 temp bänniä = ikuinen)
   const reportUser = async () => {
@@ -763,6 +854,14 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
 
       {/* Viestialue */}
       <div className="chat-messages">
+        {otherUserTyping && (
+          <div className="typing-indicator">
+            <span className="typing-dot"></span>
+            <span className="typing-dot"></span>
+            <span className="typing-dot"></span>
+            <span style={{marginLeft: 8}}>Keskustelukumppani kirjoittaa...</span>
+          </div>
+        )}
         {messages.length === 0 ? (
           <div className="empty-chat">
             <div className="empty-icon">💬</div>
@@ -817,7 +916,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         <form onSubmit={sendMessage} className="chat-input-form">
           <textarea
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
+            onChange={handleInputChange}
             onFocus={handleInputFocus}
             onBlur={handleInputBlur}
             onInput={(e) => {

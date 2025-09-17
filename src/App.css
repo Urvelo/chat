@@ -1,3 +1,24 @@
+/* Typing indicator */
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  margin: 8px 0 12px 0;
+  font-size: 1rem;
+  color: #aaa;
+}
+.typing-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #aaa;
+  margin-right: 4px;
+  animation: typingBlink 1s infinite alternate;
+  display: inline-block;
+}
+@keyframes typingBlink {
+  0% { opacity: 0.3; }
+  100% { opacity: 1; }
+}
 /* Modern Dark Theme - Chat nuorille */
 * {
   margin: 0;
