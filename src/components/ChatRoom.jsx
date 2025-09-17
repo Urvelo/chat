@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, getDoc, deleteDoc, setDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
 import { smartModerationService } from '../utils/smart-moderation.js';
@@ -17,8 +17,12 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
   const backgroundMusicRef = useRef(null);
   const joinSoundRef = useRef(null);
 
-  // Hae toisen käyttäjän tiedot - varmista että roomData ja users on valideja
-  const otherUser = roomData?.users?.find?.(u => u?.uid !== user?.uid);
+  // Hae toisen käyttäjän tiedot - memoized ja turvallinen
+  const otherUser = useMemo(() => {
+    const users = roomData?.users;
+    if (!Array.isArray(users)) return null;
+    return users.find(u => u?.uid && u.uid !== user?.uid) || null;
+  }, [roomData?.users, user?.uid]);
 
   // Kuuntele huoneen valmiutta
   useEffect(() => {
@@ -176,54 +180,48 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     return unsubscribe;
   }, [roomId, roomReady]);
 
-  // Automaattinen scroll uusimpiin viesteihin - korjattu versio
+  // Optimoitu scrollaus-funktio
+  const scrollToBottom = useCallback(() => {
+    // Yksinkertainen mobiili-ratkaisu
+    if (window.innerWidth <= 768 && messagesEndRef.current) {
+      // Mobiilissa: käytä scrollIntoView uusimmalle viestille
+      messagesEndRef.current.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'end'
+      });
+    } else {
+      // Desktop: käytä dokumentin scrollausta
+      const inputHeight = 120; // Input-kentän korkeus + padding
+      const documentHeight = document.documentElement.scrollHeight;
+      const windowHeight = window.innerHeight;
+      
+      // Scrollaa aivan pohjaan, mutta varmista että input pysyy näkyvissä
+      window.scrollTo({
+        top: Math.max(0, documentHeight - windowHeight + inputHeight),
+        behavior: 'smooth'
+      });
+    }
+  }, []);
+
+  // Automaattinen scroll uusimpiin viesteihin - optimoitu versio
   useEffect(() => {
-    // Scroll aina kun tulee uusia viestejä, mutta jätä tilaa input-kentälle
-    const scrollToBottom = () => {
-      // Yksinkertainen mobiili-ratkaisu
-      if (window.innerWidth <= 768 && messagesEndRef.current) {
-        // Mobiilissa: käytä scrollIntoView uusimmalle viestille
-        messagesEndRef.current.scrollIntoView({ 
-          behavior: 'smooth',
-          block: 'end'
-        });
-      } else {
-        // Desktop: käytä dokumentin scrollausta
-        const inputHeight = 120; // Input-kentän korkeus + padding
-        const documentHeight = document.documentElement.scrollHeight;
-        const windowHeight = window.innerHeight;
-        
-        // Scrollaa aivan pohjaan, mutta varmista että input pysyy näkyvissä
-        window.scrollTo({
-          top: documentHeight - windowHeight + inputHeight,
-          behavior: 'smooth'
-        });
-      }
-    };
+    if (messages.length === 0) return; // Ei scrollaa tyhjää
     
     // Välitön scroll ja viive varmistus
     scrollToBottom();
-    setTimeout(scrollToBottom, 100);
-  }, [messages]);
+    const timeoutId = setTimeout(scrollToBottom, 100);
+    
+    return () => clearTimeout(timeoutId);
+  }, [messages, scrollToBottom]);
 
-    // Mobile keyboard handling - optimoitu versio
+  // Mobile keyboard handling - optimoitu versio
   useEffect(() => {
     let resizeTimeout;
     
     const handleResize = () => {
       // Debounce resize events
       clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(() => {
-        // Scrollaa dokumentin loppuun, ottaen huomioon input-kentän
-        const inputHeight = 120;
-        const documentHeight = document.documentElement.scrollHeight;
-        const windowHeight = window.innerHeight;
-        
-        window.scrollTo({
-          top: documentHeight - windowHeight + inputHeight,
-          behavior: 'smooth'
-        });
-      }, 150);
+      resizeTimeout = setTimeout(scrollToBottom, 150);
     };
 
     // Optimoitu focus handling
@@ -243,17 +241,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     const handleInputBlur = () => {
       // Scroll takaisin viesteihin kun poistetaan focus
       if (window.innerWidth <= 768) {
-        setTimeout(() => {
-          // Scrollaa dokumentin loppuun kun blur
-          const inputHeight = 120;
-          const documentHeight = document.documentElement.scrollHeight;
-          const windowHeight = window.innerHeight;
-          
-          window.scrollTo({
-            top: documentHeight - windowHeight + inputHeight,
-            behavior: 'smooth'
-          });
-        }, 200);
+        setTimeout(scrollToBottom, 200);
       }
     };
 
@@ -275,58 +263,39 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         inputElement.removeEventListener('blur', handleInputBlur);
       }
     };
-  }, []);
+  }, [handleInputFocus, handleInputBlur]);
 
   // Optimoitu input focus handler
-  const handleInputFocus = () => {
+  const handleInputFocus = useCallback(() => {
     // Nopea reagointi mobiilissa
     if (window.innerWidth <= 768) {
       // Scroll bottom after keyboard shows - korjattu fixed input:lle
-      setTimeout(() => {
-        // Scrollaa dokumentin loppuun kun focus
-        const inputHeight = 120;
-        const documentHeight = document.documentElement.scrollHeight;
-        const windowHeight = window.innerHeight;
-        
-        window.scrollTo({
-          top: documentHeight - windowHeight + inputHeight,
-          behavior: 'smooth'
-        });
-      }, 300); // Lisää aikaa näppäimistön avautumiselle
+      setTimeout(scrollToBottom, 300); // Lisää aikaa näppäimistön avautumiselle
     }
-  };
+  }, [scrollToBottom]);
 
-  const handleInputBlur = () => {
+  const handleInputBlur = useCallback(() => {
     // Palauta normaali scrollaus kun näppäimistö sulkeutuu
     if (window.innerWidth <= 768) {
-      setTimeout(() => {
-        // Scrollaa dokumentin loppuun kun blur
-        const inputHeight = 120;
-        const documentHeight = document.documentElement.scrollHeight;
-        const windowHeight = window.innerHeight;
-        
-        window.scrollTo({
-          top: documentHeight - windowHeight + inputHeight,
-          behavior: 'smooth'
-        });
-      }, 100);
+      setTimeout(scrollToBottom, 100);
     }
-  };
+  }, [scrollToBottom]);
 
-  const sendMessage = async (e) => {
+  const sendMessage = useCallback(async (e) => {
     e.preventDefault();
     
-    if (!newMessage.trim() || !roomReady) {
-      console.log("Ei voida lähettää viestiä:", { hasMessage: !!newMessage.trim(), roomReady });
+    const messageText = newMessage.trim();
+    if (!messageText || !roomReady) {
+      console.log("Ei voida lähettää viestiä:", { hasMessage: !!messageText, roomReady });
       return;
     }
 
     try {
       // HYBRIDIMALLI: Offline (suomi) + OpenAI (englanti + konteksti)
-      console.log("Moderoidaan viesti hybridimallilla:", newMessage.trim());
+      console.log("Moderoidaan viesti hybridimallilla:", messageText);
       
       // 1. OFFLINE MODEROINTI (suomalaiset sanat)
-      const offlineResult = await smartModerationService.moderateMessage(newMessage.trim(), user.uid);
+      const offlineResult = await smartModerationService.moderateMessage(messageText, user.uid);
       console.log("📱 Offline moderation tulos:", offlineResult);
       
       if (offlineResult.isBlocked) {
@@ -443,7 +412,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         setNewMessage('');
       }
     }
-  };
+  }, [newMessage, roomReady, user.uid, profile.displayName, roomId]);
 
   // Taustamusiikki ja ääniefektit
   useEffect(() => {
