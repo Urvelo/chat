@@ -300,20 +300,6 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     }
   }, [scrollToBottom]);
 
-  // Typing-indikaattorin päivitys
-  const updateTypingStatus = useCallback(async (isTyping) => {
-    if (!roomId || !user?.uid) return;
-    
-    try {
-      const roomRef = doc(db, 'rooms', roomId);
-      await updateDoc(roomRef, {
-        [`typingUsers.${user.uid}`]: isTyping
-      });
-    } catch (error) {
-      console.error("❌ Virhe typing-statuksen päivityksessä:", error);
-    }
-  }, [roomId, user?.uid]);
-
   // Input-muutosten käsittely
   const handleInputChange = useCallback((e) => {
     const value = e.target.value;
@@ -322,8 +308,14 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     // Typing-indikaattorin logiikka - käytä funktionaalista päivitystä
     if (value.trim()) {
       setIsTyping(prev => {
-        if (!prev) {
-          updateTypingStatus(true);
+        if (!prev && roomId && user?.uid) {
+          // Inline typing-päivitys välttääksemme dependency-ongelman
+          const roomRef = doc(db, 'rooms', roomId);
+          updateDoc(roomRef, {
+            [`typingUsers.${user.uid}`]: true
+          }).catch(error => {
+            console.error("❌ Virhe typing-statuksen päivityksessä:", error);
+          });
         }
         return true;
       });
@@ -337,9 +329,16 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     // Aseta uusi timeout joka lopettaa typing-statuksen
     typingTimeoutRef.current = setTimeout(() => {
       setIsTyping(false);
-      updateTypingStatus(false);
+      if (roomId && user?.uid) {
+        const roomRef = doc(db, 'rooms', roomId);
+        updateDoc(roomRef, {
+          [`typingUsers.${user.uid}`]: false
+        }).catch(error => {
+          console.error("❌ Virhe typing-statuksen päivityksessä:", error);
+        });
+      }
     }, 1000); // 1 sekunnin kuluttua lopettaa typing
-  }, [updateTypingStatus]); // Poistettu isTyping circular dependency:n välttämiseksi
+  }, [roomId, user?.uid]); // Yksinkertaisemmat riippuvuudet
 
   const handleInputBlur = useCallback(() => {
     // Palauta normaali scrollaus kun näppäimistö sulkeutuu
@@ -460,7 +459,14 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       
       // Nollaa typing-status viestin lähettämisen jälkeen
       setIsTyping(false);
-      updateTypingStatus(false);
+      if (roomId && user?.uid) {
+        const roomRef = doc(db, 'rooms', roomId);
+        updateDoc(roomRef, {
+          [`typingUsers.${user.uid}`]: false
+        }).catch(error => {
+          console.error("❌ Virhe typing-statuksen päivityksessä:", error);
+        });
+      }
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = null;
@@ -488,14 +494,21 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         
         // Nollaa typing-status fallback-tapauksessakin
         setIsTyping(false);
-        updateTypingStatus(false);
+        if (roomId && user?.uid) {
+          const roomRef = doc(db, 'rooms', roomId);
+          updateDoc(roomRef, {
+            [`typingUsers.${user.uid}`]: false
+          }).catch(error => {
+            console.error("❌ Virhe typing-statuksen päivityksessä:", error);
+          });
+        }
         if (typingTimeoutRef.current) {
           clearTimeout(typingTimeoutRef.current);
           typingTimeoutRef.current = null;
         }
       }
     }
-  }, [newMessage, roomReady, user.uid, profile.displayName, roomId, updateTypingStatus]);
+  }, [newMessage, roomReady, user.uid, profile.displayName, roomId]); // Poistettu updateTypingStatus
 
   // Kuuntele localStorage-muutoksia (musiikki-asetukset)
   useEffect(() => {
@@ -553,10 +566,15 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       }
       // Nollaa typing-status kun komponentti poistuu
       if (roomId && user?.uid) {
-        updateTypingStatus(false);
+        const roomRef = doc(db, 'rooms', roomId);
+        updateDoc(roomRef, {
+          [`typingUsers.${user.uid}`]: false
+        }).catch(error => {
+          console.error("❌ Virhe typing-statuksen päivityksessä:", error);
+        });
       }
     };
-  }, [roomId, user?.uid, updateTypingStatus]);
+  }, [roomId, user?.uid]); // Poistettu updateTypingStatus
 
   // Ilmoita käyttäjä (porrastettu bänni: 4 ilmoitusta = temp bänni, 3 temp bänniä = ikuinen)
   const reportUser = async () => {
