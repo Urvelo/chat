@@ -176,20 +176,38 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     return unsubscribe;
   }, [roomId, roomReady]);
 
-  // Automaattinen scroll uusimpiin viesteihin - korjattu versio
+  // Automaattinen scroll uusimpiin viesteihin - mobiili-optimoitu versio
   useEffect(() => {
-    // Scroll aina kun tulee uusia viestejä, mutta jätä tilaa input-kentälle
+    // Scroll aina kun tulee uusia viestejä
     const scrollToBottom = () => {
-      // Scrollaa dokumentin loppuun, mutta jätä tilaa fixed input-kentälle
-      const inputHeight = 120; // Input-kentän korkeus + padding
-      const documentHeight = document.documentElement.scrollHeight;
-      const windowHeight = window.innerHeight;
-      
-      // Scrollaa aivan pohjaan, mutta varmista että input pysyy näkyvissä
-      window.scrollTo({
-        top: documentHeight - windowHeight + inputHeight,
-        behavior: 'smooth'
-      });
+      // Mobiililaitteet: käytä messagesEndRef scrollaukseen
+      if (window.innerWidth <= 768 && messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ 
+          behavior: 'smooth',
+          block: 'end'
+        });
+        
+        // Varmista että input-alue näkyy mobiilissa
+        setTimeout(() => {
+          const chatInput = document.querySelector('.chat-input-container');
+          if (chatInput) {
+            chatInput.scrollIntoView({ 
+              behavior: 'smooth',
+              block: 'end' 
+            });
+          }
+        }, 100);
+      } else {
+        // Desktop: käytä dokumentin scrollausta
+        const inputHeight = 120;
+        const documentHeight = document.documentElement.scrollHeight;
+        const windowHeight = window.innerHeight;
+        
+        window.scrollTo({
+          top: documentHeight - windowHeight + inputHeight,
+          behavior: 'smooth'
+        });
+      }
     };
     
     // Välitön scroll ja viive varmistus
@@ -272,17 +290,25 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
   const handleInputFocus = () => {
     // Nopea reagointi mobiilissa
     if (window.innerWidth <= 768) {
-      // Scroll bottom after keyboard shows - korjattu fixed input:lle
+      // Mobiili: scrollaa viestialueeseen ja sitten inputtiin
       setTimeout(() => {
-        // Scrollaa dokumentin loppuun kun focus
-        const inputHeight = 120;
-        const documentHeight = document.documentElement.scrollHeight;
-        const windowHeight = window.innerHeight;
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'end'
+          });
+        }
         
-        window.scrollTo({
-          top: documentHeight - windowHeight + inputHeight,
-          behavior: 'smooth'
-        });
+        // Varmista että input näkyy näppäimistön kanssa
+        setTimeout(() => {
+          const chatInput = document.querySelector('.chat-input');
+          if (chatInput) {
+            chatInput.scrollIntoView({ 
+              behavior: 'smooth',
+              block: 'center'
+            });
+          }
+        }, 200);
       }, 300); // Lisää aikaa näppäimistön avautumiselle
     }
   };
@@ -291,15 +317,13 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     // Palauta normaali scrollaus kun näppäimistö sulkeutuu
     if (window.innerWidth <= 768) {
       setTimeout(() => {
-        // Scrollaa dokumentin loppuun kun blur
-        const inputHeight = 120;
-        const documentHeight = document.documentElement.scrollHeight;
-        const windowHeight = window.innerHeight;
-        
-        window.scrollTo({
-          top: documentHeight - windowHeight + inputHeight,
-          behavior: 'smooth'
-        });
+        // Mobiili: scrollaa takaisin viesteihin
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'end'
+          });
+        }
       }, 100);
     }
   };
@@ -413,6 +437,18 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       await addDoc(collection(db, 'rooms', roomId, 'messages'), messageData);
       setNewMessage('');
       
+      // Mobiili: scrollaa viesteihin heti lähetyksen jälkeen
+      if (window.innerWidth <= 768) {
+        setTimeout(() => {
+          if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ 
+              behavior: 'smooth',
+              block: 'end'
+            });
+          }
+        }, 100);
+      }
+      
       console.log("Viesti lähetetty onnistuneesti");
 
     } catch (error) {
@@ -432,6 +468,18 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
 
         await addDoc(collection(db, 'rooms', roomId, 'messages'), messageData);
         setNewMessage('');
+        
+        // Mobiili: scrollaa viesteihin heti lähetyksen jälkeen
+        if (window.innerWidth <= 768) {
+          setTimeout(() => {
+            if (messagesEndRef.current) {
+              messagesEndRef.current.scrollIntoView({ 
+                behavior: 'smooth',
+                block: 'end'
+              });
+            }
+          }, 100);
+        }
       }
     }
   };
