@@ -319,10 +319,14 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     const value = e.target.value;
     setNewMessage(value);
     
-    // Typing-indikaattorin logiikka
-    if (value.trim() && !isTyping) {
-      setIsTyping(true);
-      updateTypingStatus(true);
+    // Typing-indikaattorin logiikka - käytä funktionaalista päivitystä
+    if (value.trim()) {
+      setIsTyping(prev => {
+        if (!prev) {
+          updateTypingStatus(true);
+        }
+        return true;
+      });
     }
     
     // Nollaa timeout jos on olemassa
@@ -335,7 +339,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       setIsTyping(false);
       updateTypingStatus(false);
     }, 1000); // 1 sekunnin kuluttua lopettaa typing
-  }, [isTyping, updateTypingStatus]);
+  }, [updateTypingStatus]); // Poistettu isTyping circular dependency:n välttämiseksi
 
   const handleInputBlur = useCallback(() => {
     // Palauta normaali scrollaus kun näppäimistö sulkeutuu
