@@ -495,7 +495,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         }
       }
     }
-  }, [newMessage, roomReady, user.uid, profile.displayName, roomId]);
+  }, [newMessage, roomReady, user.uid, profile.displayName, roomId, updateTypingStatus]);
 
   // Kuuntele localStorage-muutoksia (musiikki-asetukset)
   useEffect(() => {
