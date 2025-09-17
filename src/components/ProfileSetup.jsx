@@ -164,20 +164,6 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
             </div>
           </div>
 
-          {/* Musiikkivalinta */}
-          <div className="music-preference">
-            <label className="music-checkbox-simple">
-              <input
-                type="checkbox"
-                name="backgroundMusic"
-                checked={profile.backgroundMusic}
-                onChange={handleInputChange}
-              />
-              <span className="checkmark"></span>
-              Haluatko taustamusiikkia?
-            </label>
-          </div>
-
           {/* Käyttöehtojen hyväksyminen */}
           <div className="terms-preference">
             <label className="music-checkbox-simple">
