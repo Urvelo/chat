@@ -175,7 +175,7 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
                 required
               />
               <span className="checkmark"></span>
-              Hyväksyn käyttöehdot ja sitoudun asialliseen käytökseen *
+              Hyväksyn käyttöehdot
             </label>
           </div>
 
