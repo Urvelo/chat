@@ -81,7 +81,7 @@ const Auth = ({ user, setUser }) => {
     <div className="auth-container">
       <div className="login-box">
         <h1>💬 Chat nuorille</h1>
-        <p>Aloita chattailu satunnaisten ihmisten kanssa</p>
+        <p>Täytä tiedot. Älä valehtele ikääsi!</p>
         
         {error && <div className="error-message">{error}</div>}
         

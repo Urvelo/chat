@@ -19,6 +19,172 @@
   0% { opacity: 0.3; }
   100% { opacity: 1; }
 }
+
+/* Welcome page styles */
+.welcome-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #000000 100%);
+}
+
+.welcome-box {
+  background: #000000;
+  border: 1px solid #333333;
+  border-radius: 0;
+  padding: 2.5rem;
+  max-width: 600px;
+  width: 100%;
+  color: #ffffff;
+}
+
+.welcome-box h1 {
+  text-align: center;
+  margin-bottom: 2rem;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.welcome-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.welcome-section {
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+.welcome-section.warning {
+  background: rgba(255, 165, 0, 0.1);
+  border-color: rgba(255, 165, 0, 0.3);
+}
+
+.welcome-section h3 {
+  margin: 0 0 1rem 0;
+  color: #ffffff;
+  font-size: 1.2rem;
+}
+
+.welcome-section.warning h3 {
+  color: #ffa500;
+}
+
+.welcome-section p {
+  margin: 0.5rem 0;
+  line-height: 1.5;
+  color: #cccccc;
+}
+
+.welcome-section strong {
+  color: #ffffff;
+}
+
+.welcome-actions {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.disclaimer-btn {
+  background: #333333;
+  border: 1px solid #666666;
+  color: #ffffff;
+  padding: 0.8rem 1.5rem;
+  margin-bottom: 1rem;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.disclaimer-btn:hover {
+  background: #444444;
+  border-color: #888888;
+}
+
+.disclaimer-content {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 1rem 0;
+  text-align: left;
+}
+
+.disclaimer-content h4 {
+  margin: 0 0 1rem 0;
+  color: #ffffff;
+}
+
+.disclaimer-text p {
+  margin: 0.8rem 0;
+  line-height: 1.5;
+  color: #cccccc;
+}
+
+.disclaimer-text ul {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+  color: #cccccc;
+}
+
+.disclaimer-text li {
+  margin: 0.5rem 0;
+  line-height: 1.4;
+}
+
+.continue-btn {
+  background: linear-gradient(135deg, #000000 0%, #333333 100%);
+  border: 2px solid #ffffff;
+  color: #ffffff;
+  padding: 1rem 2rem;
+  cursor: pointer;
+  border-radius: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.continue-btn:hover {
+  background: linear-gradient(135deg, #ffffff 0%, #cccccc 100%);
+  color: #000000;
+  transform: translateY(-2px);
+}
+
+/* Mobile responsiveness for welcome page */
+@media (max-width: 768px) {
+  .welcome-container {
+    padding: 1rem;
+  }
+  
+  .welcome-box {
+    padding: 1.5rem;
+  }
+  
+  .welcome-box h1 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .welcome-section {
+    padding: 1rem;
+  }
+  
+  .disclaimer-content {
+    padding: 1rem;
+  }
+}
 /* Modern Dark Theme - Chat nuorille */
 * {
   margin: 0;

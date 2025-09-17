@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import Welcome from './components/Welcome';
 import Auth from './components/Auth';
 import ProfileSetup from './components/ProfileSetup';
 import Matchmaker from './components/Matchmaker';
@@ -12,7 +13,7 @@ function App() {
   const [currentRoom, setCurrentRoom] = useState(null);
   const [roomData, setRoomData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [currentView, setCurrentView] = useState('auth'); // auth, profile, matchmaker, chat
+  const [currentView, setCurrentView] = useState('welcome'); // welcome, auth, profile, matchmaker, chat
 
   // Lataa käyttäjätiedot localStorage:sta sivun latautuessa - POISTETTU
   useEffect(() => {
@@ -37,10 +38,10 @@ function App() {
       console.log('ℹ️ Siivous tehty jo tänään, ohitetaan');
     }
     
-    // Aina näytetään kirjautuminen - ei tallenneta tietoja
-    setCurrentView('auth');
+    // Aina näytetään tervetuloa-sivu - ei tallenneta tietoja
+    setCurrentView('welcome');
     setLoading(false);
-    console.log("✅ Lataus valmis - kirjautuminen vaaditaan");
+    console.log("✅ Lataus valmis - tervetuloa-sivu näytetään");
   }, []);
 
   // Kun käyttäjä asetetaan (kirjautuminen), siirry profiilisetupiin
@@ -102,6 +103,10 @@ function App() {
       
       {/* Pääsisältö */}
       <main className="app-main">
+        {currentView === 'welcome' && (
+          <Welcome onContinue={() => setCurrentView('auth')} />
+        )}
+
         {currentView === 'auth' && (
           <Auth user={user} setUser={setUser} />
         )}
