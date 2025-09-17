@@ -16,7 +16,10 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
   const [isTyping, setIsTyping] = useState(false);
   const [otherUserTyping, setOtherUserTyping] = useState(false);
   const [playMusic, setPlayMusic] = useState(() => localStorage.getItem("playMusic") !== "false");
+  const [imageUploading, setImageUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState('');
   const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
   const backgroundMusicRef = useRef(null);
   const joinSoundRef = useRef(null);
   const typingTimeoutRef = useRef(null);
@@ -208,22 +211,11 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
 
   // Optimoitu scrollaus-funktio
   const scrollToBottom = useCallback(() => {
-    // Yksinkertainen mobiili-ratkaisu
-    if (window.innerWidth <= 768 && messagesEndRef.current) {
-      // Mobiilissa: käytä scrollIntoView uusimmalle viestille
-      messagesEndRef.current.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'end'
-      });
-    } else {
-      // Desktop: käytä dokumentin scrollausta
-      const inputHeight = 120; // Input-kentän korkeus + padding
-      const documentHeight = document.documentElement.scrollHeight;
-      const windowHeight = window.innerHeight;
-      
-      // Scrollaa aivan pohjaan, mutta varmista että input pysyy näkyvissä
-      window.scrollTo({
-        top: Math.max(0, documentHeight - windowHeight + inputHeight),
+    // ChatGPT-tyylinen scroll: vieritä viesti-container pohjaan
+    const messagesContainer = document.querySelector('.chat-messages');
+    if (messagesContainer) {
+      messagesContainer.scrollTo({
+        top: messagesContainer.scrollHeight,
         behavior: 'smooth'
       });
     }
@@ -240,6 +232,22 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     return () => clearTimeout(timeoutId);
   }, [messages, scrollToBottom]);
 
+  // Input event handlerit - täytyy olla ennen useEffectiä
+  const handleInputFocus = useCallback(() => {
+    // Nopea reagointi mobiilissa
+    if (window.innerWidth <= 768) {
+      // Scroll bottom after keyboard shows - korjattu fixed input:lle
+      setTimeout(scrollToBottom, 300); // Lisää aikaa näppäimistön avautumiselle
+    }
+  }, [scrollToBottom]);
+
+  const handleInputBlur = useCallback(() => {
+    // Scroll takaisin viesteihin kun poistetaan focus
+    if (window.innerWidth <= 768) {
+      setTimeout(scrollToBottom, 200);
+    }
+  }, [scrollToBottom]);
+
   // Mobile keyboard handling - optimoitu versio
   useEffect(() => {
     let resizeTimeout;
@@ -248,27 +256,6 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       // Debounce resize events
       clearTimeout(resizeTimeout);
       resizeTimeout = setTimeout(scrollToBottom, 150);
-    };
-
-    // Optimoitu focus handling
-    const handleInputFocus = (e) => {
-      // Välitön scroll input-kentälle mobiilissa
-      if (window.innerWidth <= 768) {
-        setTimeout(() => {
-          e.target.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center',
-            inline: 'nearest'
-          });
-        }, 100);
-      }
-    };
-
-    const handleInputBlur = () => {
-      // Scroll takaisin viesteihin kun poistetaan focus
-      if (window.innerWidth <= 768) {
-        setTimeout(scrollToBottom, 200);
-      }
     };
 
     // Event listenerit
@@ -289,16 +276,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         inputElement.removeEventListener('blur', handleInputBlur);
       }
     };
-  }, [handleInputFocus, handleInputBlur]);
-
-  // Optimoitu input focus handler
-  const handleInputFocus = useCallback(() => {
-    // Nopea reagointi mobiilissa
-    if (window.innerWidth <= 768) {
-      // Scroll bottom after keyboard shows - korjattu fixed input:lle
-      setTimeout(scrollToBottom, 300); // Lisää aikaa näppäimistön avautumiselle
-    }
-  }, [scrollToBottom]);
+  }, [handleInputFocus, handleInputBlur, scrollToBottom]);
 
   // Input-muutosten käsittely
   const handleInputChange = useCallback((e) => {
@@ -340,12 +318,183 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     }, 1000); // 1 sekunnin kuluttua lopettaa typing
   }, [roomId, user?.uid]); // Yksinkertaisemmat riippuvuudet
 
-  const handleInputBlur = useCallback(() => {
-    // Palauta normaali scrollaus kun näppäimistö sulkeutuu
-    if (window.innerWidth <= 768) {
-      setTimeout(scrollToBottom, 100);
+  // ImgBB kuvan upload - turvallinen versio 24h expiration
+  const uploadImageToImgBB = useCallback(async (file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    
+    const API_KEY = 'b758ed1b7d747547e4ae4572aca54f79'; // Antamasi API-avain
+    const EXPIRATION_24H = 24 * 60 * 60; // 24 tuntia sekunteina
+    
+    try {
+      // Käytä expiration-parametria automaattista poistoa varten
+      const response = await fetch(`https://api.imgbb.com/1/upload?key=${API_KEY}&expiration=${EXPIRATION_24H}`, {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        throw new Error(`ImgBB API virhe: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('✅ Kuva ladattu ImgBB:hen (poistuu 24h kuluttua):', data.data.url);
+        return {
+          url: data.data.display_url, // Käytä display_url parempaan laatuun
+          deleteUrl: data.data.delete_url, // Tallenna delete URL myöhempää poistoa varten
+          expiration: data.data.expiration
+        };
+      } else {
+        throw new Error('ImgBB upload epäonnistui');
+      }
+    } catch (error) {
+      console.error('ImgBB upload virhe:', error);
+      throw error;
     }
-  }, [scrollToBottom]);
+  }, []);
+
+  // OpenAI kuvan moderointi - parannettu versio
+  const moderateImage = useCallback(async (imageUrl) => {
+    try {
+      console.log('🖼️ Moderoidaan kuvaa OpenAI:lla:', imageUrl);
+      
+      // Tarkista että API-avain on asetettu
+      const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+      if (!apiKey) {
+        console.warn('⚠️ OpenAI API-avain puuttuu, sallitaan kuva ilman moderointia');
+        return { flagged: false };
+      }
+      
+      const response = await fetch('https://api.openai.com/v1/moderations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          input: imageUrl,
+          model: 'omni-moderation-latest'
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('OpenAI API virhe:', response.status, errorText);
+        
+        // Jos moderation epäonnistuu, estä kuva turvallisuuden vuoksi
+        throw new Error(`OpenAI moderation epäonnistui: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Tarkista että vastaus on oikeassa formaatissa
+      if (!data.results || !data.results[0]) {
+        throw new Error('OpenAI palautti virheellisen vastauksen');
+      }
+      
+      const result = data.results[0];
+      console.log('🤖 OpenAI kuvan moderation tulos:', result);
+      
+      if (result.flagged) {
+        const categories = Object.entries(result.categories || {})
+          .filter(([_, flagged]) => flagged)
+          .map(([category, _]) => category);
+        
+        console.log('🚫 Kuva flaggattu kategorioissa:', categories);
+        return { 
+          flagged: true, 
+          categories: categories,
+          scores: result.category_scores
+        };
+      }
+      
+      console.log('✅ OpenAI: Kuva hyväksytty kaikissa kategorioissa');
+      return { flagged: false };
+      
+    } catch (error) {
+      console.error('❌ Kuvan moderointi epäonnistui:', error);
+      
+      // Turvallisuuden vuoksi: jos moderation epäonnistuu, estä kuva
+      throw new Error(`Kuvan moderointi epäonnistui: ${error.message}. Yritä uudelleen.`);
+    }
+  }, []);
+
+  // Kuvan upload käsittely
+  const handleImageUpload = useCallback(async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Tarkista tiedostotyyppi
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('🚫 Sallitut kuvaformaatit: JPG, PNG, GIF, WEBP');
+      return;
+    }
+
+    // Tarkista tiedostokoko (32MB max)
+    const maxSize = 32 * 1024 * 1024; // 32MB bytes
+    if (file.size > maxSize) {
+      alert('🚫 Kuva on liian suuri. Maksimikoko: 32MB');
+      return;
+    }
+
+    if (!roomReady) {
+      alert('⏳ Odota toista käyttäjää ennen kuvan lähettämistä');
+      return;
+    }
+
+    setImageUploading(true);
+    setUploadProgress('Tarkistetaan tiedostoa...');
+
+    try {
+      // 1. Lataa kuva ImgBB:hen (24h expiration)
+      setUploadProgress('Ladataan kuvaa palvelimelle...');
+      const imageData = await uploadImageToImgBB(file);
+      console.log('✅ Kuva ladattu ImgBB:hen (poistuu automaattisesti 24h):', imageData);
+
+      // 2. Moderoi kuva OpenAI:lla
+      setUploadProgress('Tarkistetaan kuvan sisältöä...');
+      const moderationResult = await moderateImage(imageData.url);
+      
+      if (moderationResult.flagged) {
+        const categories = moderationResult.categories?.join(', ') || 'Sopimaton sisältö';
+        alert(`🚫 Tämä kuva ei ole sallittu chatissa.\n📋 Syy: ${categories}`);
+        return;
+      }
+
+      // 3. Lähetä kuvaviesti chatiin (turvallisesti tallennettu)
+      setUploadProgress('Lähetetään kuvaa chatiin...');
+      await addDoc(collection(db, `rooms/${roomId}/messages`), {
+        text: '', // Tyhjä teksti kuvaviestille
+        imageUrl: imageData.url, // Käytä display_url parempaan laatuun
+        imageDeleteUrl: imageData.deleteUrl, // Tallenna delete URL varmuuden vuoksi
+        imageExpiration: imageData.expiration, // Tallenna expiration-tiedot
+        type: 'image',
+        senderId: user.uid,
+        senderName: profile?.nickname || user.displayName || 'Tuntematon',
+        senderAge: profile?.age || 'Ei määritelty',
+        timestamp: serverTimestamp(),
+        moderationChecked: true, // Kuva on jo moderoitu
+        isPrivate: true // Merkitse yksityiseksi chat-kuvaksi
+      });
+
+      console.log('✅ Kuvaviesti lähetetty');
+      scrollToBottom();
+
+    } catch (error) {
+      console.error('❌ Kuvan lähetys epäonnistui:', error);
+      alert('❌ Kuvan lähetys epäonnistui. Yritä uudelleen.');
+    } finally {
+      setImageUploading(false);
+      setUploadProgress('');
+      // Tyhjennä file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  }, [roomReady, roomId, user, profile, uploadImageToImgBB, moderateImage, scrollToBottom]);
 
   const sendMessage = useCallback(async (e) => {
     e.preventDefault();
@@ -912,7 +1061,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
           </div>
         ) : (
           messages.map((message, index) => {
-            if (!message || !message.text) return null;
+            if (!message || (!message.text && !message.imageUrl)) return null;
             
             // System-viestit erityiskäsittely
             if (message.type === 'system') {
@@ -941,7 +1090,31 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
               >
                 <div className={`message ${isOwn ? 'own' : 'other'}`}>
                   <div className="message-content">
-                    {message.text}
+                    {/* Tekstiviesti */}
+                    {message.text && (
+                      <div className="message-text">
+                        {message.text}
+                      </div>
+                    )}
+                    
+                    {/* Kuvaviesti */}
+                    {message.imageUrl && (
+                      <div className="message-image">
+                        <img 
+                          src={message.imageUrl} 
+                          alt="Jaettu kuva" 
+                          className="chat-image"
+                          loading="lazy"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'block';
+                          }}
+                        />
+                        <div className="image-error" style={{ display: 'none' }}>
+                          🖼️ Kuva ei latautunut
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div className="message-time">
                     {formatTime(message.timestamp)}
@@ -963,10 +1136,23 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
             onFocus={handleInputFocus}
             onBlur={handleInputBlur}
             onInput={(e) => {
-              // Auto-resize up to ~150px height
+              // ChatGPT-tyylinen auto-resize
               const el = e.target;
+              const prevHeight = el.offsetHeight;
+              
               el.style.height = 'auto';
-              el.style.height = Math.min(el.scrollHeight, 150) + 'px';
+              const newHeight = Math.min(el.scrollHeight, 150);
+              el.style.height = newHeight + 'px';
+              
+              // Jos korkeus muuttui, säädä vieritys
+              const heightDiff = newHeight - prevHeight;
+              if (heightDiff !== 0) {
+                // Säädä vieritys siten että textarea pysyy näkyvissä
+                const messagesContainer = document.querySelector('.chat-messages');
+                if (messagesContainer) {
+                  messagesContainer.scrollTop += heightDiff;
+                }
+              }
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
@@ -985,6 +1171,42 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
             enterKeyHint="send"
             style={{ resize: 'none' }}
           />
+          
+          {/* Kuva-upload painike */}
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            style={{ display: 'none' }}
+            ref={fileInputRef}
+            id="image-upload"
+          />
+          <label 
+            htmlFor="image-upload" 
+            className={`chat-image-btn ${imageUploading ? 'image-uploading' : ''}`}
+            style={{ 
+              pointerEvents: !roomReady || imageUploading ? 'none' : 'auto',
+              opacity: !roomReady || imageUploading ? 0.6 : 1 
+            }}
+            title={imageUploading ? uploadProgress || "Lähettää kuvaa..." : "Lähetä kuva"}
+          >
+            {imageUploading ? (
+              <>
+                ⏳
+                <div className="upload-spinner"></div>
+              </>
+            ) : (
+              '📷'
+            )}
+          </label>
+          
+          {/* Progress-teksti kuvan latauksen aikana */}
+          {imageUploading && uploadProgress && (
+            <div className="upload-progress-text">
+              {uploadProgress}
+            </div>
+          )}
+          
           <button 
             type="submit" 
             disabled={!newMessage.trim() || !roomReady}

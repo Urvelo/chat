@@ -91,6 +91,16 @@
   margin-top: 1rem;
 }
 
+.welcome-actions .terms-preference,
+.welcome-actions .music-preference {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+  text-align: left;
+}
+
 .disclaimer-btn {
   background: #333333;
   border: 1px solid #666666;
@@ -981,7 +991,7 @@ html, body {
   overflow: hidden;
 }
 
-/* Mobile keyboard handling */
+/* Chat Container - ChatGPT-tyylinen layout */
 .chat-container {
   width: 100vw;
   height: 100vh;
@@ -1266,19 +1276,15 @@ html, body {
 }
 
 .chat-messages {
-  flex: 1;
+  flex: 1 1 auto; /* vie kaiken tilan, venyy ja skrollaa */
   background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%);
   overflow-y: auto;
   overflow-x: hidden;
   padding: 1rem;
-  padding-bottom: 200px; /* Lisätty tilaa input-containerille */
-  min-height: calc(100vh - 150px); /* Varmistaa että on tarpeeksi korkeutta */
   display: flex;
   flex-direction: column;
   gap: 0.8rem;
-  position: relative;
   -webkit-overflow-scrolling: touch;
-  /* Varmistetaan että scrollaus toimii oikein */
   scroll-behavior: smooth;
 }
 
@@ -1371,17 +1377,15 @@ html, body {
 }
 
 .chat-input-container {
+  flex-shrink: 0; /* ei pienene */
   background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
   border-top: 1px solid #333333;
   padding: 1.2rem 1.5rem;
   backdrop-filter: blur(10px);
-  position: fixed;
-  bottom: env(safe-area-inset-bottom, 0); /* iOS safe area, fallback 0 */
-  left: 0;
-  right: 0;
+  position: sticky; /* pysyy pohjassa */
+  bottom: 0;
   width: 100%;
   z-index: 1000;
-  flex-shrink: 0; /* Estää kutistumisen näppäimistön kanssa */
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.5);
   /* Näppäimistösuojaus */
   transform: translateZ(0); /* Force hardware acceleration */
@@ -1507,6 +1511,120 @@ html, body {
   padding: 3rem 2rem;
   font-style: italic;
   font-size: 1.1rem;
+}
+
+/* Kuva-upload painike */
+.chat-image-btn {
+  background: linear-gradient(135deg, #1e90ff 0%, #4169e1 100%);
+  border: none;
+  color: #ffffff;
+  padding: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1.4rem;
+  width: 45px;
+  height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(30, 144, 255, 0.3);
+  touch-action: manipulation;
+  flex-shrink: 0;
+  margin-right: 0.5rem;
+  text-decoration: none;
+}
+
+.chat-image-btn:hover:not([disabled]) {
+  background: linear-gradient(135deg, #4169e1 0%, #1e90ff 100%);
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(30, 144, 255, 0.4);
+}
+
+.chat-image-btn[disabled] {
+  background: #333333;
+  color: #666666;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Kuvaviestien styling */
+.message-image {
+  margin-top: 0.5rem;
+}
+
+.chat-image {
+  max-width: 250px;
+  max-height: 300px;
+  width: auto;
+  height: auto;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.chat-image:hover {
+  transform: scale(1.02);
+}
+
+.image-error {
+  color: #ff6b6b;
+  font-style: italic;
+  padding: 1rem;
+  background: rgba(255, 107, 107, 0.1);
+  border-radius: 8px;
+  text-align: center;
+}
+
+/* Loading spinner kuvan latauksen aikana */
+.image-uploading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.upload-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top: 2px solid #ffffff;
+  animation: spin 1s linear infinite;
+  margin-left: 0.5rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Upload progress teksti */
+.upload-progress-text {
+  position: absolute;
+  bottom: 70px;
+  right: 60px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #ffffff;
+  padding: 0.5rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1001;
+  animation: fadeInUp 0.3s ease-out;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Odotustila toiselle käyttäjälle */
