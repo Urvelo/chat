@@ -180,16 +180,25 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
   useEffect(() => {
     // Scroll aina kun tulee uusia viestejä, mutta jätä tilaa input-kentälle
     const scrollToBottom = () => {
-      // Scrollaa dokumentin loppuun, mutta jätä tilaa fixed input-kentälle
-      const inputHeight = 120; // Input-kentän korkeus + padding
-      const documentHeight = document.documentElement.scrollHeight;
-      const windowHeight = window.innerHeight;
-      
-      // Scrollaa aivan pohjaan, mutta varmista että input pysyy näkyvissä
-      window.scrollTo({
-        top: documentHeight - windowHeight + inputHeight,
-        behavior: 'smooth'
-      });
+      // Yksinkertainen mobiili-ratkaisu
+      if (window.innerWidth <= 768 && messagesEndRef.current) {
+        // Mobiilissa: käytä scrollIntoView uusimmalle viestille
+        messagesEndRef.current.scrollIntoView({ 
+          behavior: 'smooth',
+          block: 'end'
+        });
+      } else {
+        // Desktop: käytä dokumentin scrollausta
+        const inputHeight = 120; // Input-kentän korkeus + padding
+        const documentHeight = document.documentElement.scrollHeight;
+        const windowHeight = window.innerHeight;
+        
+        // Scrollaa aivan pohjaan, mutta varmista että input pysyy näkyvissä
+        window.scrollTo({
+          top: documentHeight - windowHeight + inputHeight,
+          behavior: 'smooth'
+        });
+      }
     };
     
     // Välitön scroll ja viive varmistus
