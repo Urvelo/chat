@@ -176,15 +176,21 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     return unsubscribe;
   }, [roomId, roomReady]);
 
-  // Automaattinen scroll uusimpiin viesteihin - parannettu versio
+  // Automaattinen scroll uusimpiin viesteihin - korjattu versio
   useEffect(() => {
-    // Scroll aina kun tulee uusia viestejä
+    // Scroll aina kun tulee uusia viestejä, mutta jätä tilaa input-kentälle
     const scrollToBottom = () => {
-      messagesEndRef.current?.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'end',
-        inline: 'nearest' 
-      });
+      if (messagesEndRef.current) {
+        // Laske input-kentän korkeus (noin 100px + padding)
+        const inputHeight = 120;
+        const targetPosition = messagesEndRef.current.offsetTop - inputHeight;
+        
+        // Scrollaa näkyviin mutta jätä tilaa input-kentälle
+        window.scrollTo({
+          top: Math.max(0, targetPosition),
+          behavior: 'smooth'
+        });
+      }
     };
     
     // Välitön scroll ja viive varmistus
@@ -200,7 +206,15 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       // Debounce resize events
       clearTimeout(resizeTimeout);
       resizeTimeout = setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        // Korjattu scrollaus joka jättää tilaa input-kentälle
+        if (messagesEndRef.current) {
+          const inputHeight = 120;
+          const targetPosition = messagesEndRef.current.offsetTop - inputHeight;
+          window.scrollTo({
+            top: Math.max(0, targetPosition),
+            behavior: 'smooth'
+          });
+        }
       }, 150);
     };
 
@@ -222,7 +236,15 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       // Scroll takaisin viesteihin kun poistetaan focus
       if (window.innerWidth <= 768) {
         setTimeout(() => {
-          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+          // Korjattu scrollaus joka jättää tilaa input-kentälle
+          if (messagesEndRef.current) {
+            const inputHeight = 120;
+            const targetPosition = messagesEndRef.current.offsetTop - inputHeight;
+            window.scrollTo({
+              top: Math.max(0, targetPosition),
+              behavior: 'smooth'
+            });
+          }
         }, 200);
       }
     };
@@ -255,17 +277,13 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       setTimeout(() => {
         // Scrollaa viestialue näkyviin, ottaen huomioon fixed input
         if (messagesEndRef.current) {
-          messagesEndRef.current.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'end' 
+          const inputHeight = 120;
+          const targetPosition = messagesEndRef.current.offsetTop - inputHeight;
+          window.scrollTo({
+            top: Math.max(0, targetPosition),
+            behavior: 'smooth'
           });
         }
-        
-        // Varmista että sivu on scrollattu tarpeeksi ylös
-        window.scrollTo({ 
-          top: Math.max(0, document.body.scrollHeight - window.innerHeight + 120), 
-          behavior: 'smooth' 
-        });
       }, 300); // Lisää aikaa näppäimistön avautumiselle
     }
   };
@@ -275,9 +293,11 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     if (window.innerWidth <= 768) {
       setTimeout(() => {
         if (messagesEndRef.current) {
-          messagesEndRef.current.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'end' 
+          const inputHeight = 120;
+          const targetPosition = messagesEndRef.current.offsetTop - inputHeight;
+          window.scrollTo({
+            top: Math.max(0, targetPosition),
+            behavior: 'smooth'
           });
         }
       }, 100);
