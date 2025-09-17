@@ -11,6 +11,7 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
   const [unsubscribe, setUnsubscribe] = useState(null);
   const [activeUsersCount, setActiveUsersCount] = useState(0);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [playMusic, setPlayMusic] = useState(() => localStorage.getItem("playMusic") !== "false");
 
   // Debug loggaus
   console.log("Matchmaker saanut props:", { user, profile });
@@ -103,10 +104,28 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
     };
   }, []);
 
+  // Kuuntele localStorage-muutoksia (musiikki-asetukset)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const musicSetting = localStorage.getItem("playMusic") !== "false";
+      setPlayMusic(musicSetting);
+    };
+
+    // Kuuntele storage-tapahtumia (toinen välilehti muuttaa asetusta)
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Kuuntele myös custom-tapahtumaa samalla välilehdellä
+    window.addEventListener('musicSettingChanged', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('musicSettingChanged', handleStorageChange);
+    };
+  }, []);
+
   // Aloita musiikki automaattisesti oletuksena
   useEffect(() => {
-    // Tarkista ettei musiikki ole kielletty
-    if (localStorage.getItem("playMusic") !== "false") {
+    if (playMusic) {
       // Varmista ettei musiikki jo soi
       if (!window.backgroundMusic) {
         const audio = new Audio('/meditation-relaxing-music-293922.mp3');
@@ -119,8 +138,15 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
         
         window.backgroundMusic = audio;
       }
+    } else {
+      // Pysäytä musiikki jos asetus on pois päältä
+      if (window.backgroundMusic) {
+        window.backgroundMusic.pause();
+        window.backgroundMusic.currentTime = 0;
+        window.backgroundMusic = null;
+      }
     }
-  }, []);
+  }, [playMusic]); // Lisätty playMusic riippuvuudeksi
 
   // Kuuntele olemassa olevia huoneita joissa käyttäjä on mukana - korjattu versio
   useEffect(() => {

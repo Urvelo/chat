@@ -15,6 +15,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [otherUserTyping, setOtherUserTyping] = useState(false);
+  const [playMusic, setPlayMusic] = useState(() => localStorage.getItem("playMusic") !== "false");
   const messagesEndRef = useRef(null);
   const backgroundMusicRef = useRef(null);
   const joinSoundRef = useRef(null);
@@ -492,19 +493,39 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     }
   }, [newMessage, roomReady, user.uid, profile.displayName, roomId]);
 
+  // Kuuntele localStorage-muutoksia (musiikki-asetukset)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const musicSetting = localStorage.getItem("playMusic") !== "false";
+      setPlayMusic(musicSetting);
+    };
+
+    // Kuuntele storage-tapahtumia (toinen välilehti muuttaa asetusta)
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Kuuntele myös custom-tapahtumaa samalla välilehdellä
+    window.addEventListener('musicSettingChanged', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('musicSettingChanged', handleStorageChange);
+    };
+  }, []);
+
   // Taustamusiikki ja ääniefektit
   useEffect(() => {
-    const playMusic = localStorage.getItem("playMusic") !== "false"; // Oletuksena päälle
-    
     if (playMusic && backgroundMusicRef.current) {
       backgroundMusicRef.current.volume = 0.15;
       backgroundMusicRef.current.play().catch(error => {
         console.log("Automaattinen musiikki estetty selaimessa:", error);
       });
+    } else if (!playMusic && backgroundMusicRef.current) {
+      // Pysäytä musiikki jos asetus on pois päältä
+      backgroundMusicRef.current.pause();
     }
     
-    // Yhdistymisääni kun huone on valmis
-    if (roomReady && joinSoundRef.current) {
+    // Yhdistymisääni kun huone on valmis (vain jos musiikki on päällä)
+    if (roomReady && playMusic && joinSoundRef.current) {
       joinSoundRef.current.volume = 0.3;
       joinSoundRef.current.play().catch(error => {
         console.log("Yhdistymisääni estetty selaimessa:", error);
@@ -518,7 +539,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         backgroundMusicRef.current.currentTime = 0;
       }
     };
-  }, [roomReady]); // Suorita kun roomReady muuttuu
+  }, [roomReady, playMusic]); // Lisätty playMusic riippuvuudeksi
 
   // Cleanup typing-indikaattori komponenttia poistettaessa
   useEffect(() => {

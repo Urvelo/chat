@@ -81,6 +81,12 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
       // Tallenna vain Firestoreen - EI localStorage:iin
       await setDoc(doc(db, 'profiles', user.uid), profileData);
       
+      // Tallenna musiikki-asetus localStorage:iin
+      localStorage.setItem("playMusic", profile.backgroundMusic.toString());
+      
+      // Lähetä custom event jotta ChatRoom kuulee muutoksen
+      window.dispatchEvent(new Event('musicSettingChanged'));
+      
       console.log("✅ Profiili tallennettu, kutsutaan onProfileComplete");
       onProfileComplete(profileData);
     } catch (error) {
