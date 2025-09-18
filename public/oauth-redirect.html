@@ -89,15 +89,14 @@
             if (!currentOrigin.includes('chatti.online') && !currentOrigin.includes('localhost')) {
                 console.error('❌ Virheellinen domain');
                 window.location.href = 'https://chatti.online/';
-                return;
+            } else {
+                const targetUrl = `${baseUrl}/?oauth_callback=true${hash}`;
+                console.log('🎯 Ohjataan osoitteeseen:', targetUrl);
+                
+                setTimeout(() => {
+                    window.location.href = targetUrl;
+                }, 300); // Nopeutettu 1.5s → 0.3s
             }
-            
-            const targetUrl = `${baseUrl}/?oauth_callback=true${hash}`;
-            console.log('🎯 Ohjataan osoitteeseen:', targetUrl);
-            
-            setTimeout(() => {
-                window.location.href = targetUrl;
-            }, 300); // Nopeutettu 1.5s → 0.3s
             
         } else {
             console.error('❌ Ei access tokenia');
