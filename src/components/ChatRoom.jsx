@@ -404,12 +404,14 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         },
         body: JSON.stringify({
           model: 'omni-moderation-latest',
-          input: {
-            type: 'image_url',
-            image_url: {
-              url: imageUrl
+          input: [
+            {
+              type: 'image_url',
+              image_url: {
+                url: imageUrl
+              }
             }
-          }
+          ]
         })
       });
 
