@@ -2,18 +2,7 @@
 <html lang="fi">
 <head>
     <meta charset="UTF-8">
-         <div class="spinner"></div>
-        <h2>🔐 Kirjaudutaan Google-tilillä</h2>
-        <p id="status">Yhdistetään turvallisesti chatti-palveluun...</p>
-        <div class="debug">
-            <div><strong>Chatti.online</strong> - Turvallinen keskustelupalvelu nuorille</div>
-            <div>🔒 Yksityisyys turvattu • 🛡️ Moderoitu sisältö</div>
-            <div style="margin-top: 1rem;">
-                <div>Nykyinen: <span id="current-port">-</span></div>
-                <div>Kohde: <span id="target-port">-</span></div>
-                <div>OAuth: <span id="has-hash">-</span></div>
-            </div>
-        </div>e="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kirjaudutaan sisään...</title>
     <style>
         body {
@@ -28,16 +17,13 @@
             justify-content: center;
         }
         .container {
-            background: #1a1a1a;
-            border: 1px solid #333333;
-            padding: 3rem 2rem;
             text-align: center;
             max-width: 400px;
             width: 90%;
         }
         .spinner {
-            width: 40px;
-            height: 40px;
+            width: 60px;
+            height: 60px;
             border: 4px solid #333333;
             border-top: 4px solid #ffffff;
             border-radius: 50%;
@@ -51,94 +37,58 @@
         h2 {
             color: #ffffff;
             margin-bottom: 1rem;
-            font-size: 1.5rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            font-size: 1.8rem;
+            font-weight: 300;
+            letter-spacing: 1px;
         }
         p {
             color: #cccccc;
             margin-bottom: 1rem;
-            font-size: 1rem;
+            font-size: 1.1rem;
+            line-height: 1.5;
         }
-        .debug {
-            font-size: 0.8rem;
-            color: #666666;
-            margin-top: 2rem;
-            text-align: left;
-            background: #0a0a0a;
-            padding: 1rem;
-            border: 1px solid #333333;
+        .dots {
+            display: inline-block;
+            animation: dots 1.5s infinite;
         }
-        .debug div {
-            margin-bottom: 0.5rem;
+        @keyframes dots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div className="spinner"></div>
-        <h2>� Kirjaudutaan Google-tilillä</h2>
-        <p id="status">Yhdistetään turvallisesti chatti-palveluun...</p>
-        <div className="debug">
-            <div><strong>Chatti.online</strong> - Turvallinen keskustelupalvelu nuorille</div>
-            <div>🔒 Yksityisyys turvattu • 🛡️ Moderoitu sisältö</div>
-            <div style="margin-top: 1rem;">
-                <div>Nykyinen: <span id="current-port">-</span></div>
-                <div>Kohde: <span id="target-port">-</span></div>
-                <div>OAuth: <span id="has-hash">-</span></div>
-            </div>
-        </div>
+        <div class="spinner"></div>
+        <h2>🔐 Kirjaudutaan</h2>
+        <p id="status">Yhdistetään Google-tiliin<span class="dots">...</span></p>
     </div>
 
     <script>
-        // Debug-tiedot
-        const currentPort = window.location.port || '80';
-        const targetPorts = ['5173', '5174', '3000']; // Mahdolliset Vite-portit
-        const hasHash = window.location.hash ? 'Kyllä' : 'Ei';
-        
-        document.getElementById('current-port').textContent = currentPort;
-        document.getElementById('has-hash').textContent = hasHash;
-        
         console.log('🔄 OAuth redirect-sivu latautunut');
-        console.log('📍 Current location:', window.location.href);
-        console.log('🔑 Hash:', window.location.hash);
         
-        // Hae hash-parametrit
         const hash = window.location.hash;
         
         if (hash.includes('access_token')) {
             console.log('✅ Access token löytyi');
             
-            // Etsi toimiva Vite-portti
-            let targetPort = null;
+            document.getElementById('status').innerHTML = 'Siirretään takaisin sovellukseen<span class="dots">...</span>';
             
-            // Jos ollaan jo oikeassa portissa, käytä sitä
-            if (targetPorts.includes(currentPort)) {
-                targetPort = currentPort;
-            } else {
-                // Muuten kokeile yleisimpiä portteja
-                targetPort = '5173'; // Vite default
-            }
-            
-            document.getElementById('target-port').textContent = targetPort;
-            
-            // Luo oikea URL - käytä samaa domainia kuin nyt
-            const currentOrigin = window.location.origin; // https://www.chatti.online
-            const baseUrl = currentOrigin.replace('www.', ''); // https://chatti.online
+            const currentOrigin = window.location.origin;
+            const baseUrl = currentOrigin.replace('www.', '');
             const targetUrl = `${baseUrl}/?oauth_callback=true${hash}`;
             
             console.log('🎯 Ohjataan osoitteeseen:', targetUrl);
-            document.getElementById('status').textContent = `Ohjataan takaisin sovellukseen...`;
             
-            // Ohjaa automaattisesti 1 sekunnin kuluttua
             setTimeout(() => {
                 window.location.href = targetUrl;
-            }, 1000);
+            }, 1500);
             
         } else {
             console.error('❌ Ei access tokenia');
-            document.getElementById('status').innerHTML = '❌ Virhe: Ei kirjautumistietoja.<br>Ohjataan etusivulle...';
+            document.getElementById('status').innerHTML = '❌ Virhe kirjautumisessa<span class="dots">...</span>';
             
             setTimeout(() => {
                 window.location.href = window.location.origin.replace('www.', '') + '/';
