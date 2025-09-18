@@ -287,19 +287,9 @@ const Auth = ({ user, setUser }) => {
           </button>
         </div>
         
-        <div className="auth-benefits">
-          <div className="benefit-item">
-            <span className="benefit-icon">🔒</span>
-            <span>Vain 18+ Google-käyttäjät voivat lähettää kuvia</span>
-          </div>
-          <div className="benefit-item">
-            <span className="benefit-icon">🛡️</span>
-            <span>Moderoitu ja turvallinen keskustelupalvelu</span>
-          </div>
-        </div>
-        
         <div className="disclaimer">
           <p>Turvallinen keskustelupalvelu 15+ vuotiaille</p>
+          <p className="feature-note">🔒 Vain 18+ Google-käyttäjät voivat lähettää kuvia</p>
         </div>
       </div>
     </div>
