@@ -464,6 +464,17 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       return;
     }
 
+    // UUSI: Tarkista että käyttäjä on 18+ JA Google-käyttäjä
+    if (!user?.isGoogleUser) {
+      alert('🚫 Vain Google-tilillä kirjautuneet voivat lähettää kuvia.');
+      return;
+    }
+
+    if (!profile?.age || profile.age < 18) {
+      alert('🚫 Vain 18+ vuotiaat voivat lähettää kuvia.');
+      return;
+    }
+
     // Tarkista tiedostotyyppi
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {

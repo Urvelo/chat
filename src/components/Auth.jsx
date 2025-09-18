@@ -14,6 +14,8 @@ const Auth = ({ user, setUser }) => {
     
     try {
       console.log("🔍 Aloitetaan Google OAuth kirjautuminen...");
+      
+      // Näytä loading ja käsittele OAuth taustalla
       const { data, error } = await signInWithGoogle();
       
       if (error) {
@@ -22,29 +24,14 @@ const Auth = ({ user, setUser }) => {
         return;
       }
 
-      if (data?.user) {
-        console.log("✅ Google OAuth onnistui:", data.user);
-        
-        // Muunna Supabase user chattipalvelun käyttäjäksi
-        const chatUser = {
-          uid: 'google-' + data.user.id,
-          displayName: data.user.user_metadata?.full_name || data.user.email?.split('@')[0],
-          email: data.user.email,
-          photoURL: data.user.user_metadata?.avatar_url,
-          age: null, // Kysytään erikseen
-          createdAt: new Date().toISOString(),
-          isGoogleUser: true
-        };
-
-        console.log("🔄 Luotu chat-käyttäjä Google-datasta:", chatUser);
-        setUser(chatUser);
-      }
+      // OAuth käynnistyy, odota callback
+      console.log("✅ Google OAuth käynnistetty:", data);
+      
     } catch (error) {
       console.error("❌ Google OAuth epäonnistui:", error);
       setError('Google-kirjautuminen epäonnistui. Yritä uudelleen.');
-    } finally {
-      setGoogleLoading(false);
     }
+    // EI seta googleLoading false - pidetään loading päällä kunnes callback tulee
   };
 
   const handleSubmit = async (e) => {
@@ -121,55 +108,89 @@ const Auth = ({ user, setUser }) => {
   return (
     <div className="auth-container">
       <div className="login-box">
-        <h1>💬 Chat nuorille</h1>
-        <p>Täytä tiedot. Älä valehtele ikääsi!</p>
+        <h1>💬 Aloita chattailu</h1>
         
         {error && <div className="error-message">{error}</div>}
         
-        <form onSubmit={handleSubmit} className="auth-form">
-          <div className="form-group">
-            <label htmlFor="name">Nimesi</label>
-            <input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Kirjoita nimesi..."
-              maxLength="30"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="age">Ikäsi</label>
-            <input
-              id="age"
-              type="number"
-              value={age}
-              onChange={(e) => setAge(e.target.value)}
-              placeholder="Kirjoita ikäsi..."
-              min="15"
-              required
-            />
-          </div>
-
+        <div className="auth-options">
           <button 
-            type="submit" 
-            className="google-sign-in-btn"
-            disabled={loading}
+            onClick={handleGoogleSignIn}
+            className="google-oauth-btn primary-option"
+            disabled={googleLoading}
           >
-            {loading ? 'Aloitetaan...' : '🚀 Aloita chattailu'}
+            {googleLoading ? (
+              <>
+                <span className="loading-spinner-small">⟳</span>
+                Kirjaudutaan Google-tilillä...
+              </>
+            ) : (
+              <>
+                <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" className="google-icon" />
+                Kirjaudu Google-tilillä
+              </>
+            )}
           </button>
-        </form>
+          
+          <div className="google-benefits">
+            ✅ Vain 18+ ja Google-käyttäjät voivat lähettää kuvia<br/>
+            ✅ Ikä tallennetaan automaattisesti<br/>
+            ✅ Turvallisempi käyttökokemus
+          </div>
 
-        <div className="auth-divider">
-          <span>tai</span>
+          <div className="auth-divider">
+            <span>tai</span>
+          </div>
+
+          <form onSubmit={handleSubmit} className="auth-form">
+            <div className="form-group">
+              <label htmlFor="name">Nimimerkki</label>
+              <input
+                id="name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Kirjoita nimimerkki..."
+                maxLength="30"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="age">Ikäsi</label>
+              <input
+                id="age"
+                type="number"
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
+                placeholder="Kirjoita ikäsi..."
+                min="15"
+                required
+              />
+            </div>
+
+            <button 
+              type="submit" 
+              className="anonymous-btn"
+              disabled={loading}
+            >
+              {loading ? 'Aloitetaan...' : 'Jatka anonyymisti'}
+            </button>
+            
+            <div className="anonymous-note">
+              ⚠️ Anonyymit käyttäjät eivät voi lähettää kuvia
+            </div>
+          </form>
         </div>
-
-        <button 
-          onClick={handleGoogleSignIn}
-          className="google-oauth-btn"
-          disabled={googleLoading}
+        
+        <div className="disclaimer">
+          <p>Turvallinen ja moderoitu keskustelupalvelu 15+ vuotiaille</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+          </form>
+        </div>
         >
           {googleLoading ? (
             <>

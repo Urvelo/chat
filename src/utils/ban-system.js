@@ -245,7 +245,7 @@ const sendModerationMessage = async (roomId, type, data) => {
         break;
         
       case 'text_warning':
-        messageText = `⚠️ Toinen käyttäjä kirjoitti sopimatonta sisältöä. (${data.violationCount}/5 varoitusta tänään)`;
+        messageText = `⚠️ Sopimatonta sisältöä.`;
         break;
     }
 
