@@ -14,8 +14,8 @@ export const signInWithGoogle = async () => {
   try {
     console.log('🚀 Aloitetaan Google OAuth kirjautuminen...');
     
-    // Käytä oauth-redirect.html Vite-palvelimelta
-    const redirectUrl = `${window.location.origin}/oauth-redirect.html`;
+    // Pakota tuotanto redirect URL
+    const redirectUrl = 'https://chatti.online/oauth-redirect.html';
     console.log('📍 Käytetään redirect URL:', redirectUrl);
     
     const { data, error } = await supabase.auth.signInWithOAuth({
