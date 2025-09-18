@@ -496,6 +496,78 @@ body {
   border-color: #333333;
 }
 
+/* Google OAuth Button */
+.google-oauth-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: #ffffff;
+  color: #333333;
+  border: 1px solid #dadce0;
+  padding: 1rem 2rem;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 6px;
+  text-transform: none;
+  letter-spacing: normal;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 100%;
+}
+
+.google-oauth-btn:hover {
+  background: #f8f9fa;
+  border-color: #c6c6c6;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.google-oauth-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.google-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.loading-spinner-small {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+  font-size: 1rem;
+}
+
+/* Auth Divider */
+.auth-divider {
+  position: relative;
+  text-align: center;
+  margin: 1.5rem 0;
+  color: #666666;
+  font-size: 0.9rem;
+}
+
+.auth-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #333333;
+  z-index: 1;
+}
+
+.auth-divider span {
+  background: #1a1a1a;
+  padding: 0 1rem;
+  position: relative;
+  z-index: 2;
+}
+
 /* Musiikkivalinta ProfileSetupissa - yksinkertainen versio */
 .music-preference {
   margin: 1.5rem 0;
@@ -2165,6 +2237,166 @@ html, body {
   
   .feedback-link-btn {
     align-self: center;
+  }
+  
+  /* Google Auth Test Styles */
+  .auth-test-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+
+  .auth-test-box {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    padding: 2.5rem;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+  }
+
+  .auth-test-box h2 {
+    color: #333;
+    margin-bottom: 2rem;
+    font-size: 1.8rem;
+  }
+
+  .auth-test-box h3 {
+    color: #555;
+    margin-bottom: 1.5rem;
+    font-size: 1.3rem;
+  }
+
+  .user-info {
+    margin-bottom: 2rem;
+  }
+
+  .user-details {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin: 1.5rem 0;
+    text-align: left;
+  }
+
+  .user-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .user-text p {
+    margin: 0.5rem 0;
+    color: #333;
+  }
+
+  .auth-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 50px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+    margin: 0.5rem;
+  }
+
+  .auth-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 20px rgba(0, 0, 0, 0.15);
+  }
+
+  .auth-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .google-btn {
+    background: linear-gradient(135deg, #4285f4 0%, #34a853 50%, #fbbc05 75%, #ea4335 100%);
+  }
+
+  .logout-btn {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+  }
+
+  .test-info {
+    background: #f0f2f5;
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-top: 2rem;
+  }
+
+  .test-info h4 {
+    color: #333;
+    margin-bottom: 1rem;
+  }
+
+  .test-info ul {
+    text-align: left;
+    color: #555;
+    line-height: 1.6;
+  }
+
+  .test-info li {
+    margin: 0.5rem 0;
+  }
+
+  .loading {
+    font-size: 1.2rem;
+    color: white;
+    text-align: center;
+    padding: 2rem;
+  }
+
+  /* Auth Callback Styles */
+  .auth-callback-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+
+  .callback-loading {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    padding: 3rem;
+    text-align: center;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+  }
+
+  .callback-loading h2 {
+    color: #333;
+    margin-bottom: 1rem;
+  }
+
+  .callback-loading p {
+    color: #666;
+    margin-bottom: 2rem;
+  }
+
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
   }
   
   .feedback-overlay {

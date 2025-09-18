@@ -5,7 +5,8 @@ import { getCachedFingerprint } from '../utils/fingerprint';
 const ProfileSetup = ({ user, onProfileComplete }) => {
   const [profile, setProfile] = useState({
     termsAccepted: false,
-    backgroundMusic: true // Oletuksena päälle
+    backgroundMusic: true, // Oletuksena päälle
+    age: user?.age || '' // Google-käyttäjien ikä saattaa puuttua
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -49,6 +50,12 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
       return;
     }
 
+    // Tarkista ikä Google-käyttäjillä
+    if (!profile.age || profile.age < 15) {
+      setError('Ikä täytyy olla vähintään 15 vuotta.');
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
@@ -64,19 +71,15 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
       };
       
       // Luo profiili
-      const profileData = {
-        uid: user.uid,
-        email: user.email,
+      const finalProfile = {
         displayName: user.displayName,
-        age: user.age,
-        ageGroup: calculateAgeGroup(user.age),
-        deviceFingerprint: deviceFingerprint,
-        termsAccepted: true,
-        createdAt: new Date(),
-        lastActive: new Date()
-      };
-
-      console.log("💾 Tallennettava profiilidata:", profileData);
+        age: parseInt(profile.age), // Käytä lomakkeesta syötettyä ikää
+        ageGroup: profile.age >= 18 ? '18+' : '15-17',
+        backgroundMusic: profile.backgroundMusic,
+        deviceFingerprint,
+        createdAt: new Date().toISOString(),
+        isGoogleUser: user.isGoogleUser || false
+      };      console.log("💾 Tallennettava profiilidata:", profileData);
 
       // Tallenna vain Firestoreen - EI localStorage:iin
       await setDoc(doc(db, 'profiles', user.uid), profileData);
@@ -169,6 +172,25 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
           </div>
 
           <div className="welcome-actions">
+            {/* Google-käyttäjien ikä-kenttä */}
+            {(!user.age || user.isGoogleUser) && (
+              <div className="form-group">
+                <label htmlFor="age">Ikäsi *</label>
+                <input
+                  id="age"
+                  type="number"
+                  name="age"
+                  value={profile.age}
+                  onChange={handleInputChange}
+                  placeholder="Kirjoita ikäsi..."
+                  min="15"
+                  max="99"
+                  required
+                />
+                <small>Ikäsi tarvitaan sopivien chatti-kavereiden löytämiseen.</small>
+              </div>
+            )}
+
             {/* Käyttöehtojen hyväksyminen */}
             <div className="terms-preference">
               <label className="music-checkbox-simple">

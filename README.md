@@ -9,18 +9,29 @@ npm install
 npm run dev
 ```
 
-## � Built With
+## 🛠️ Built With
 
 - React + Vite
-- Firebase
+- Firebase Firestore
+- Supabase (Google OAuth)
 - Modern CSS
 
-## ️ Security Features
+## 🔒 Security Features
 
-- Secure authentication
-- Content moderation  
-- User safety tools
+- **Google OAuth** - Secure authentication
+- **Auto-moderation** - OpenAI + offline content filtering
+- **Smart bans** - Escalating punishment system
+- **Image sharing** - ImgBB with 24h auto-deletion
+- **User safety tools** - Report system
 
-## � License
+## ✨ Features
+
+- Real-time chat with Firebase
+- ChatGPT-style modern UI
+- Image sharing with moderation
+- Background music option
+- Mobile-responsive design
+
+## 📄 License
 
 MIT License
