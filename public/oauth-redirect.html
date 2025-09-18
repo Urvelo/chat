@@ -100,11 +100,13 @@
             
             document.getElementById('target-port').textContent = targetPort;
             
-            // Luo oikea URL - lisää hash-parametrit query-parametreiksi
-            const targetUrl = `http://localhost:${targetPort}/?oauth_callback=true${hash}`;
+            // Luo oikea URL - käytä samaa domainia kuin nyt
+            const currentOrigin = window.location.origin; // https://www.chatti.online
+            const baseUrl = currentOrigin.replace('www.', ''); // https://chatti.online
+            const targetUrl = `${baseUrl}/?oauth_callback=true${hash}`;
             
             console.log('🎯 Ohjataan osoitteeseen:', targetUrl);
-            document.getElementById('status').textContent = `Ohjataan porttiin ${targetPort}...`;
+            document.getElementById('status').textContent = `Ohjataan takaisin sovellukseen...`;
             
             // Ohjaa automaattisesti 1 sekunnin kuluttua
             setTimeout(() => {
@@ -116,7 +118,7 @@
             document.getElementById('status').innerHTML = '❌ Virhe: Ei kirjautumistietoja.<br>Ohjataan etusivulle...';
             
             setTimeout(() => {
-                window.location.href = 'http://localhost:5173/';
+                window.location.href = window.location.origin.replace('www.', '') + '/';
             }, 3000);
         }
     </script>
