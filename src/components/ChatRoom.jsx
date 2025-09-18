@@ -382,10 +382,10 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     }
   }, []);
 
-  // OpenAI kuvan moderointi - parannettu versio
+  // OpenAI kuvan moderointi - OIKEA ilmainen moderation API
   const moderateImage = useCallback(async (imageUrl) => {
     try {
-      console.log('🖼️ Moderoidaan kuvaa OpenAI:lla:', imageUrl);
+      console.log('🖼️ Moderoidaan kuvaa OpenAI moderation API:lla:', imageUrl);
       
       // Tarkista että API-avain on asetettu
       const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
@@ -394,6 +394,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         return { flagged: false };
       }
       
+      // Käytä OIKEAA ilmaista OpenAI moderation API:a omni-moderation-latest mallilla
       const response = await fetch('https://api.openai.com/v1/moderations', {
         method: 'POST',
         headers: {
@@ -401,38 +402,41 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
           'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          input: imageUrl,
-          model: 'omni-moderation-latest'
+          model: 'omni-moderation-latest',
+          input: imageUrl
         })
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('OpenAI API virhe:', response.status, errorText);
+        console.error('OpenAI moderation API virhe:', response.status, errorText);
         
         // Jos moderation epäonnistuu, estä kuva turvallisuuden vuoksi
         throw new Error(`OpenAI moderation epäonnistui: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('🤖 OpenAI moderation API vastaus:', data);
       
       // Tarkista että vastaus on oikeassa formaatissa
       if (!data.results || !data.results[0]) {
-        throw new Error('OpenAI palautti virheellisen vastauksen');
+        throw new Error('OpenAI moderation palautti virheellisen vastauksen');
       }
       
       const result = data.results[0];
-      console.log('🤖 OpenAI kuvan moderation tulos:', result);
       
       if (result.flagged) {
-        const categories = Object.entries(result.categories || {})
-          .filter(([_, flagged]) => flagged)
-          .map(([category, _]) => category);
+        // Kerää flaggatut kategoriat
+        const flaggedCategories = Object.keys(result.categories).filter(
+          category => result.categories[category]
+        );
         
-        console.log('🚫 Kuva flaggattu kategorioissa:', categories);
-        return { 
-          flagged: true, 
-          categories: categories,
+        console.log('🚫 Kuva flaggattu kategorioissa:', flaggedCategories);
+        console.log('� Category scores:', result.category_scores);
+        
+        return {
+          flagged: true,
+          categories: flaggedCategories,
           scores: result.category_scores
         };
       }
