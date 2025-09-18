@@ -26,6 +26,7 @@ export const signInWithGoogle = async () => {
           access_type: 'offline',
           prompt: 'consent',
         },
+        skipBrowserRedirect: false // Varmista että aukeaa samassa ikkunassa
       }
     });
 

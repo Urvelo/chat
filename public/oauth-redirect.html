@@ -2,7 +2,18 @@
 <html lang="fi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+         <div class="spinner"></div>
+        <h2>🔐 Kirjaudutaan Google-tilillä</h2>
+        <p id="status">Yhdistetään turvallisesti chatti-palveluun...</p>
+        <div class="debug">
+            <div><strong>Chatti.online</strong> - Turvallinen keskustelupalvelu nuorille</div>
+            <div>🔒 Yksityisyys turvattu • 🛡️ Moderoitu sisältö</div>
+            <div style="margin-top: 1rem;">
+                <div>Nykyinen: <span id="current-port">-</span></div>
+                <div>Kohde: <span id="target-port">-</span></div>
+                <div>OAuth: <span id="has-hash">-</span></div>
+            </div>
+        </div>e="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kirjaudutaan sisään...</title>
     <style>
         body {
@@ -66,13 +77,17 @@
 </head>
 <body>
     <div class="container">
-        <div class="spinner"></div>
-        <h2>🔑 Kirjaudutaan sisään</h2>
-        <p id="status">Ohjataan chat-sovellukseen...</p>
-        <div class="debug">
-            <div>Port: <span id="current-port">-</span></div>
-            <div>Target: <span id="target-port">-</span></div>
-            <div>Hash: <span id="has-hash">-</span></div>
+        <div className="spinner"></div>
+        <h2>� Kirjaudutaan Google-tilillä</h2>
+        <p id="status">Yhdistetään turvallisesti chatti-palveluun...</p>
+        <div className="debug">
+            <div><strong>Chatti.online</strong> - Turvallinen keskustelupalvelu nuorille</div>
+            <div>🔒 Yksityisyys turvattu • 🛡️ Moderoitu sisältö</div>
+            <div style="margin-top: 1rem;">
+                <div>Nykyinen: <span id="current-port">-</span></div>
+                <div>Kohde: <span id="target-port">-</span></div>
+                <div>OAuth: <span id="has-hash">-</span></div>
+            </div>
         </div>
     </div>
 
