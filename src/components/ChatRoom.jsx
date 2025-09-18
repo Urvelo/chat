@@ -461,9 +461,9 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
           const score = result.category_scores[category];
           console.log(`📊 ${category}: ${score.toFixed(4)}`);
           
-          // TIUKENNETTU threshold seksuaaliselle sisällölle
-          if ((category === 'sexual' && score > 0.15) ||        // Erittäin matala kynnys alastomuudelle
-              (category === 'sexual/minors' && score > 0.01) ||  // Nollatoleranssi alaikäisille
+          // ERITTÄIN TIUKENNETTU threshold bikineille ja alastomuudelle
+          if ((category === 'sexual' && score > 0.0001) ||       // ÄÄRIMMÄISEN matala - estää bikinit
+              (category === 'sexual/minors' && score > 0.00001) || // Absoluuttinen nollatoleranssi
               (category === 'violence' && score > 0.6) ||        
               (category === 'violence/graphic' && score > 0.5) ||
               (category === 'harassment' && score > 0.6)) {      
