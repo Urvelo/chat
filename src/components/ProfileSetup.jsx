@@ -12,14 +12,50 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  // Tarkista onko profiili jo olemassa - POISTETTU localStorage
+  // Tarkista onko profiili jo olemassa - Google-käyttäjille tallennetaan hyväksyntä
   useEffect(() => {
     const checkExistingProfile = async () => {
       try {
-        console.log("📋 Aina luodaan uusi profiili käyttäjälle:", user?.displayName);
+        console.log("📋 Tarkistetaan profiilia käyttäjälle:", user?.displayName);
         
-        // EI tarkisteta localStorage:a tai Firestore:a - aina uusi profiili
-        console.log("🆕 Uusi sessio - näytetään profiilisetup");
+        // Google-käyttäjille: tarkista onko hyväksynyt käyttöehdot aiemmin
+        if (user?.isGoogleUser) {
+          const savedTermsAcceptance = localStorage.getItem(`google_terms_${user.uid}`);
+          const savedAge = localStorage.getItem(`google_age_${user.uid}`);
+          
+          if (savedTermsAcceptance === 'true' && savedAge) {
+            console.log("✅ Google-käyttäjän tiedot löytyi - ohitetaan setup");
+            
+            // Luo profiili suoraan tallennetuilla tiedoilla
+            const completedProfile = {
+              termsAccepted: true,
+              backgroundMusic: true,
+              age: parseInt(savedAge)
+            };
+            
+            // Tallenna profiili ja jatka
+            const finalProfile = {
+              ...completedProfile,
+              uid: user.uid,
+              displayName: user.displayName,
+              email: user.email,
+              photoURL: user.photoURL,
+              createdAt: user.createdAt,
+              isGoogleUser: true,
+              fingerprint: await getCachedFingerprint()
+            };
+            
+            console.log("💾 Käytetään tallennettuja Google tietoja:", finalProfile);
+            
+            // Jatka suoraan matchmakeriin
+            onProfileComplete(finalProfile);
+            return;
+          } else {
+            console.log("🆕 Uusi Google-käyttäjä - näytetään setup");
+          }
+        }
+        
+        console.log("🆕 Näytetään profiilisetup");
 
       } catch (error) {
         console.error('Virhe profiilin tarkistuksessa:', error);
@@ -85,6 +121,13 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
 
       // Tallenna vain Firestoreen - EI localStorage:iin
       await setDoc(doc(db, 'profiles', user.uid), profileData);
+      
+      // Google-käyttäjille: tallenna hyväksyntä ja ikä localStorage:iin tulevaa käyttöä varten
+      if (user.isGoogleUser) {
+        localStorage.setItem(`google_terms_${user.uid}`, 'true');
+        localStorage.setItem(`google_age_${user.uid}`, profile.age.toString());
+        console.log("💾 Tallennettu Google-käyttäjän hyväksyntä ja ikä localStorage:iin");
+      }
       
       // Tallenna musiikki-asetus localStorage:iin
       localStorage.setItem("playMusic", profile.backgroundMusic.toString());
