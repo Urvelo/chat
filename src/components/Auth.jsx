@@ -15,7 +15,6 @@ const Auth = ({ user, setUser }) => {
     try {
       console.log("🔍 Aloitetaan Google OAuth kirjautuminen...");
       
-      // Näytä loading ja käsittele OAuth taustalla
       const { data, error } = await signInWithGoogle();
       
       if (error) {
@@ -24,14 +23,12 @@ const Auth = ({ user, setUser }) => {
         return;
       }
 
-      // OAuth käynnistyy, odota callback
       console.log("✅ Google OAuth käynnistetty:", data);
       
     } catch (error) {
       console.error("❌ Google OAuth epäonnistui:", error);
       setError('Google-kirjautuminen epäonnistui. Yritä uudelleen.');
     }
-    // EI seta googleLoading false - pidetään loading päällä kunnes callback tulee
   };
 
   const handleSubmit = async (e) => {
@@ -54,7 +51,6 @@ const Auth = ({ user, setUser }) => {
     try {
       console.log("🚀 Aloitetaan kirjautuminen:", name.trim(), "ikä:", age);
       
-      // Luo yksinkertainen käyttäjäobjekti
       const newUser = {
         uid: 'user-' + Math.random().toString(36).substr(2, 9),
         displayName: name.trim(),
@@ -66,11 +62,8 @@ const Auth = ({ user, setUser }) => {
 
       console.log("💾 Luodaan käyttäjä (ei tallenneta):", newUser);
       
-      // EI tallenneta localStorage:iin - aina kysytään uudestaan
-      
       console.log("✅ Käyttäjä luotu, asetetaan tilaan");
       
-      // Aseta käyttäjä - tämä laukaisee siirtymän App.jsx:ssä
       setUser(newUser);
       
       console.log("🎉 Kirjautuminen valmis, odotetaan siirtymää...");
@@ -83,7 +76,6 @@ const Auth = ({ user, setUser }) => {
   };
 
   const handleSignOut = () => {
-    // Poistetaan vain muistista - ei localStorage:ia
     setUser(null);
   };
 
@@ -184,29 +176,6 @@ const Auth = ({ user, setUser }) => {
         
         <div className="disclaimer">
           <p>Turvallinen ja moderoitu keskustelupalvelu 15+ vuotiaille</p>
-        </div>
-      </div>
-    </div>
-  );
-};
-          </form>
-        </div>
-        >
-          {googleLoading ? (
-            <>
-              <span className="loading-spinner-small">⟳</span>
-              Kirjaudutaan...
-            </>
-          ) : (
-            <>
-              <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" className="google-icon" />
-              Jatka Google-tilillä
-            </>
-          )}
-        </button>
-        
-        <div className="disclaimer">
-          <p>Käyttämällä palvelua hyväksyt käyttöehtomme. Käyttäydymme vastuullisesti!</p>
         </div>
       </div>
     </div>
