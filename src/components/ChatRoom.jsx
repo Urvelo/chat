@@ -395,6 +395,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       }
       
       // Käytä OIKEAA ilmaista OpenAI moderation API:a omni-moderation-latest mallilla
+      // Kuville pitää käyttää objekti formaattia
       const response = await fetch('https://api.openai.com/v1/moderations', {
         method: 'POST',
         headers: {
@@ -403,7 +404,12 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         },
         body: JSON.stringify({
           model: 'omni-moderation-latest',
-          input: imageUrl
+          input: {
+            type: 'image_url',
+            image_url: {
+              url: imageUrl
+            }
+          }
         })
       });
 
@@ -433,6 +439,47 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         
         console.log('🚫 Kuva flaggattu kategorioissa:', flaggedCategories);
         console.log('� Category scores:', result.category_scores);
+        
+        return {
+          flagged: true,
+          categories: flaggedCategories,
+          scores: result.category_scores
+        };
+      }
+      
+      // TARKEMPI DEBUG - näytetään kaikki kategoriat ja scoret
+      console.log('🔍 Moderation result flagged:', result.flagged);
+      console.log('🔍 Kaikki kategoriat:', result.categories);
+      console.log('🔍 Kaikki scoret:', result.category_scores);
+      
+      // TIUKENNETUT THRESHOLDIT - estä alastomia kuvia matalammilla arvoilla
+      const highRiskCategories = [];
+      if (result.category_scores) {
+        Object.keys(result.category_scores).forEach(category => {
+          const score = result.category_scores[category];
+          console.log(`📊 ${category}: ${score.toFixed(4)}`);
+          
+          // TIUKENNETTU threshold seksuaaliselle sisällölle
+          if ((category === 'sexual' && score > 0.15) ||        // Erittäin matala kynnys alastomuudelle
+              (category === 'sexual/minors' && score > 0.01) ||  // Nollatoleranssi alaikäisille
+              (category === 'violence' && score > 0.6) ||        
+              (category === 'violence/graphic' && score > 0.5) ||
+              (category === 'harassment' && score > 0.6)) {      
+            highRiskCategories.push(category);
+          }
+        });
+      }
+      
+      // Jos löytyy high-risk kategorioita TAI alkuperäinen flagged, estä kuva
+      if (result.flagged || highRiskCategories.length > 0) {
+        const flaggedCategories = result.flagged ? 
+          Object.keys(result.categories).filter(category => result.categories[category]) :
+          highRiskCategories;
+        
+        console.log('🚫🚫🚫 KUVA ESTETTY - SOPIMATON SISÄLTÖ!');
+        console.log('🚫 Estetty kategorioissa:', flaggedCategories);
+        console.log('📊 Tiukennetut thresholdit toimivat!');
+        console.log('📊 Category scores:', result.category_scores);
         
         return {
           flagged: true,
