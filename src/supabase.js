@@ -25,8 +25,8 @@ export const signInWithGoogle = async () => {
         queryParams: {
           access_type: 'offline',
           prompt: 'consent',
-        },
-        skipBrowserRedirect: false // Varmista että aukeaa samassa ikkunassa
+        }
+        // Ei skipBrowserRedirect-asetusta - käytetään oletusta (sama ikkuna)
       }
     });
 

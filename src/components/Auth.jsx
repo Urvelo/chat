@@ -254,6 +254,17 @@ const Auth = ({ user, setUser }) => {
       <div className="login-box">
         <h1>💬 Aloita chattailu</h1>
         
+        {/* Loading overlay Google OAuth:n aikana */}
+        {googleLoading && (
+          <div className="oauth-loading-overlay">
+            <div className="oauth-loading-content">
+              <div className="spinner"></div>
+              <h3>🔐 Kirjaudutaan Google-tilillä</h3>
+              <p>Ohjataan Google-kirjautumiseen...</p>
+            </div>
+          </div>
+        )}
+        
         {error && <div className="error-message">{error}</div>}
         
         <div className="main-auth-options">

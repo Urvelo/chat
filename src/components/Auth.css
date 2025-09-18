@@ -8,6 +8,49 @@
   padding: 20px;
 }
 
+/* Loading overlay Google OAuth:n aikana */
+.oauth-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  z-index: 100;
+}
+
+.oauth-loading-content {
+  text-align: center;
+  color: white;
+}
+
+.oauth-loading-content .spinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid #333333;
+  border-top: 3px solid #ffffff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+.oauth-loading-content h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: white;
+}
+
+.oauth-loading-content p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #cccccc;
+}
+
 .login-box {
   background: white;
   border-radius: 16px;
@@ -16,6 +59,7 @@
   max-width: 420px;
   box-shadow: 0 20px 40px rgba(0,0,0,0.1);
   text-align: center;
+  position: relative; /* Tarvitaan overlay:lle */
 }
 
 .login-box h1 {
