@@ -4,7 +4,7 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #000000;
   padding: 20px;
 }
 
@@ -125,15 +125,14 @@
 }
 
 .anonymous-main-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  background: #2c3e50 !important;
   color: white !important;
-  border: 2px solid rgba(255, 255, 255, 0.2) !important;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3) !important;
+  border: 2px solid #2c3e50 !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
 }
 
 .anonymous-main-btn::before {
-  background: linear-gradient(135deg, #5a67d8 0%, #667eea 100%) !important;
+  background: #1a252f !important;
 }
 
 .anonymous-main-btn .btn-text h3,
@@ -142,15 +141,14 @@
 }
 
 .google-main-btn {
-  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%) !important;
+  background: #4285f4 !important;
   color: white !important;
-  border: 2px solid rgba(255, 255, 255, 0.2) !important;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 8px 32px rgba(255, 107, 107, 0.3) !important;
+  border: 2px solid #4285f4 !important;
+  box-shadow: 0 4px 16px rgba(66, 133, 244, 0.3) !important;
 }
 
 .google-main-btn::before {
-  background: linear-gradient(135deg, #e55757 0%, #ff6b6b 100%) !important;
+  background: #1557b0 !important;
 }
 
 .google-main-btn .btn-text h3,
@@ -203,7 +201,7 @@
 }
 
 .google-main-btn .btn-text h3 {
-  color: #333;
+  color: white !important;
 }
 
 .btn-text p {
@@ -218,7 +216,7 @@
 }
 
 .google-main-btn .btn-text p {
-  color: #666;
+  color: rgba(255, 255, 255, 0.9) !important;
 }
 
 /* Auth benefits - Kauniimpi */
