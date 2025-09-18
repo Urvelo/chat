@@ -20,7 +20,17 @@ const Auth = ({ user, setUser }) => {
       
       if (error) {
         console.error("❌ Google OAuth virhe:", error);
-        setError('Google-kirjautuminen epäonnistui: ' + error.message);
+        
+        // Spesifimpi error handling
+        if (error.message?.includes('popup')) {
+          setError('Popup estettiin. Salli popup-ikkunat ja yritä uudelleen.');
+        } else if (error.message?.includes('network')) {
+          setError('Verkkovirhe. Tarkista internetyhteytesi.');
+        } else {
+          setError('Google-kirjautuminen epäonnistui: ' + error.message);
+        }
+        
+        setGoogleLoading(false);
         return;
       }
 
@@ -29,6 +39,7 @@ const Auth = ({ user, setUser }) => {
     } catch (error) {
       console.error("❌ Google OAuth epäonnistui:", error);
       setError('Google-kirjautuminen epäonnistui. Yritä uudelleen.');
+      setGoogleLoading(false);
     }
   };
 
@@ -37,14 +48,49 @@ const Auth = ({ user, setUser }) => {
     setError(null);
     setLoading(true);
 
-    if (!name.trim()) {
+    // Parannettu input validointi
+    const trimmedName = name.trim();
+    const numericAge = parseInt(age);
+
+    if (!trimmedName) {
       setError('Nimi on pakollinen');
       setLoading(false);
       return;
     }
 
-    if (!age || age < 15) {
+    if (trimmedName.length < 2) {
+      setError('Nimen täytyy olla vähintään 2 merkkiä');
+      setLoading(false);
+      return;
+    }
+
+    if (trimmedName.length > 30) {
+      setError('Nimi ei voi olla yli 30 merkkiä');
+      setLoading(false);
+      return;
+    }
+
+    // XSS-suojaus: vain sallitut merkit
+    if (!/^[a-zA-ZäöåÄÖÅ0-9\s\-_\.]+$/.test(trimmedName)) {
+      setError('Nimessä voi käyttää vain kirjaimia, numeroita ja perussymboleita');
+      setLoading(false);
+      return;
+    }
+
+    if (!age || isNaN(numericAge)) {
+      setError('Ikä täytyy olla numero');
+      setLoading(false);
+      return;
+    }
+
+    if (numericAge < 15) {
       setError('Ikä täytyy olla vähintään 15 vuotta');
+      setLoading(false);
+      return;
+    }
+
+    if (numericAge > 120) {
+      setError('Tarkista ikäsi');
       setLoading(false);
       return;
     }

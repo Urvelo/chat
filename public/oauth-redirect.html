@@ -74,12 +74,25 @@
         if (hash.includes('access_token')) {
             console.log('✅ Access token löytyi');
             
-            document.getElementById('status').innerHTML = 'Siirretään takaisin sovellukseen<span class="dots">...</span>';
+            // XSS-turvallinen tekstin päivittäminen
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = 'Siirretään takaisin sovellukseen';
+            const dotsSpan = document.createElement('span');
+            dotsSpan.className = 'dots';
+            dotsSpan.textContent = '...';
+            statusElement.appendChild(dotsSpan);
             
             const currentOrigin = window.location.origin;
             const baseUrl = currentOrigin.replace('www.', '');
-            const targetUrl = `${baseUrl}/?oauth_callback=true${hash}`;
             
+            // URL validointi turvallisuuden vuoksi
+            if (!currentOrigin.includes('chatti.online') && !currentOrigin.includes('localhost')) {
+                console.error('❌ Virheellinen domain');
+                window.location.href = 'https://chatti.online/';
+                return;
+            }
+            
+            const targetUrl = `${baseUrl}/?oauth_callback=true${hash}`;
             console.log('🎯 Ohjataan osoitteeseen:', targetUrl);
             
             setTimeout(() => {
@@ -88,7 +101,12 @@
             
         } else {
             console.error('❌ Ei access tokenia');
-            document.getElementById('status').innerHTML = '❌ Virhe kirjautumisessa<span class="dots">...</span>';
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = '❌ Virhe kirjautumisessa';
+            const dotsSpan = document.createElement('span');
+            dotsSpan.className = 'dots';
+            dotsSpan.textContent = '...';
+            statusElement.appendChild(dotsSpan);
             
             setTimeout(() => {
                 window.location.href = window.location.origin.replace('www.', '') + '/';
