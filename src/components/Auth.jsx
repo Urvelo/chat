@@ -7,6 +7,7 @@ const Auth = ({ user, setUser }) => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [step, setStep] = useState('main'); // 'main', 'anonymous-form', 'terms'
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
@@ -48,8 +49,14 @@ const Auth = ({ user, setUser }) => {
       return;
     }
 
+    // Siirry käyttöehtoihin
+    setStep('terms');
+    setLoading(false);
+  };
+
+  const handleAcceptTerms = () => {
     try {
-      console.log("🚀 Aloitetaan kirjautuminen:", name.trim(), "ikä:", age);
+      console.log("🚀 Luodaan anonyymi käyttäjä:", name.trim(), "ikä:", age);
       
       const newUser = {
         uid: 'user-' + Math.random().toString(36).substr(2, 9),
@@ -60,19 +67,13 @@ const Auth = ({ user, setUser }) => {
         createdAt: new Date().toISOString()
       };
 
-      console.log("💾 Luodaan käyttäjä (ei tallenneta):", newUser);
-      
       console.log("✅ Käyttäjä luotu, asetetaan tilaan");
-      
       setUser(newUser);
       
-      console.log("🎉 Kirjautuminen valmis, odotetaan siirtymää...");
     } catch (error) {
       console.error('❌ Sisäänkirjautumisvirhe:', error);
       setError('Jotain meni pieleen. Yritä uudelleen.');
     }
-
-    setLoading(false);
   };
 
   const handleSignOut = () => {
@@ -97,42 +98,57 @@ const Auth = ({ user, setUser }) => {
     );
   }
 
-  return (
-    <div className="auth-container">
-      <div className="login-box">
-        <h1>💬 Aloita chattailu</h1>
-        
-        {error && <div className="error-message">{error}</div>}
-        
-        <div className="auth-options">
-          <button 
-            onClick={handleGoogleSignIn}
-            className="google-oauth-btn primary-option"
-            disabled={googleLoading}
-          >
-            {googleLoading ? (
-              <>
-                <span className="loading-spinner-small">⟳</span>
-                Kirjaudutaan Google-tilillä...
-              </>
-            ) : (
-              <>
-                <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" className="google-icon" />
-                Kirjaudu Google-tilillä
-              </>
-            )}
-          </button>
+  // Käyttöehdot sivu
+  if (step === 'terms') {
+    return (
+      <div className="auth-container">
+        <div className="login-box">
+          <h1>� Käyttöehdot</h1>
           
-          <div className="google-benefits">
-            ✅ Vain 18+ ja Google-käyttäjät voivat lähettää kuvia<br/>
-            ✅ Ikä tallennetaan automaattisesti<br/>
-            ✅ Turvallisempi käyttökokemus
+          <div className="terms-content">
+            <h3>Tervetuloa chattiin!</h3>
+            <p>Käyttämällä palvelua sitoudut noudattamaan seuraavia sääntöjä:</p>
+            
+            <ul>
+              <li>🚫 Ei kiusaamista, haukkumista tai uhkailua</li>
+              <li>🚫 Ei sopimatonta sisältöä (väkivalta, seksi, huumeet)</li>
+              <li>🚫 Ei henkilötietojen jakamista</li>
+              <li>🚫 Ei roskapostia tai mainontaa</li>
+              <li>✅ Ole kohtelias ja kunnioita muita</li>
+              <li>✅ Pidä keskustelu asiallisena</li>
+            </ul>
+            
+            <p><strong>Muista:</strong> Kaikki viestit moderoidaan automaattisesti. Sääntörikkomukset voivat johtaa varoituksiin tai porttikieltoon.</p>
           </div>
-
-          <div className="auth-divider">
-            <span>tai</span>
+          
+          <div className="terms-buttons">
+            <button 
+              onClick={() => setStep('anonymous-form')}
+              className="back-btn"
+            >
+              ← Takaisin
+            </button>
+            <button 
+              onClick={handleAcceptTerms}
+              className="accept-terms-btn"
+            >
+              Hyväksyn ehdot ja aloitan chatin
+            </button>
           </div>
+        </div>
+      </div>
+    );
+  }
 
+  // Anonyymi lomake
+  if (step === 'anonymous-form') {
+    return (
+      <div className="auth-container">
+        <div className="login-box">
+          <h1>👤 Anonyymi kirjautuminen</h1>
+          
+          {error && <div className="error-message">{error}</div>}
+          
           <form onSubmit={handleSubmit} className="auth-form">
             <div className="form-group">
               <label htmlFor="name">Nimimerkki</label>
@@ -160,22 +176,84 @@ const Auth = ({ user, setUser }) => {
               />
             </div>
 
-            <button 
-              type="submit" 
-              className="anonymous-btn"
-              disabled={loading}
-            >
-              {loading ? 'Aloitetaan...' : 'Jatka anonyymisti'}
-            </button>
+            <div className="form-buttons">
+              <button 
+                type="button"
+                onClick={() => setStep('main')}
+                className="back-btn"
+              >
+                ← Takaisin
+              </button>
+              <button 
+                type="submit" 
+                className="continue-btn"
+                disabled={loading}
+              >
+                {loading ? 'Ladataan...' : 'Jatka →'}
+              </button>
+            </div>
             
             <div className="anonymous-note">
               ⚠️ Anonyymit käyttäjät eivät voi lähettää kuvia
             </div>
           </form>
         </div>
+      </div>
+    );
+  }
+
+  // Pääsivu - 2 nappia
+  return (
+    <div className="auth-container">
+      <div className="login-box">
+        <h1>💬 Aloita chattailu</h1>
+        
+        {error && <div className="error-message">{error}</div>}
+        
+        <div className="main-auth-options">
+          <button 
+            onClick={() => setStep('anonymous-form')}
+            className="main-auth-btn anonymous-main-btn"
+          >
+            <div className="btn-icon">👤</div>
+            <div className="btn-text">
+              <h3>Jatka anonyymisti</h3>
+              <p>Valitse nimimerkki ja ikä</p>
+            </div>
+          </button>
+          
+          <button 
+            onClick={handleGoogleSignIn}
+            className="main-auth-btn google-main-btn"
+            disabled={googleLoading}
+          >
+            <div className="btn-icon">
+              {googleLoading ? (
+                <span className="loading-spinner-small">⟳</span>
+              ) : (
+                <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" className="google-icon" />
+              )}
+            </div>
+            <div className="btn-text">
+              <h3>Kirjaudu Google-tilillä</h3>
+              <p>{googleLoading ? 'Kirjaudutaan...' : 'Nopea ja turvallinen'}</p>
+            </div>
+          </button>
+        </div>
+        
+        <div className="auth-benefits">
+          <div className="benefit-item">
+            <span className="benefit-icon">🔒</span>
+            <span>Vain 18+ Google-käyttäjät voivat lähettää kuvia</span>
+          </div>
+          <div className="benefit-item">
+            <span className="benefit-icon">🛡️</span>
+            <span>Moderoitu ja turvallinen keskustelupalvelu</span>
+          </div>
+        </div>
         
         <div className="disclaimer">
-          <p>Turvallinen ja moderoitu keskustelupalvelu 15+ vuotiaille</p>
+          <p>Turvallinen keskustelupalvelu 15+ vuotiaille</p>
         </div>
       </div>
     </div>
