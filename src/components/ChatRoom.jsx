@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, getDoc, deleteDoc, setDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
 import { smartModerationService } from '../utils/smart-moderation.js';
+import { handleInappropriateContent, isUserBanned, BAN_REASONS } from '../utils/ban-system.js';
 // Firebase Functions moderointi poistettu - käytetään vain offline-moderointia
 import FeedbackModal from './FeedbackModal';
 
@@ -18,6 +19,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
   const [playMusic, setPlayMusic] = useState(() => localStorage.getItem("playMusic") !== "false");
   const [imageUploading, setImageUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
+  const [userBanStatus, setUserBanStatus] = useState(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const backgroundMusicRef = useRef(null);
@@ -87,6 +89,31 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
 
     return unsubscribe;
   }, [roomId]);
+
+  // Tarkista käyttäjän banni-tila
+  useEffect(() => {
+    const checkBanStatus = async () => {
+      if (!user?.uid) return;
+      
+      try {
+        const banStatus = await isUserBanned(user.uid);
+        setUserBanStatus(banStatus);
+        
+        if (banStatus.banned) {
+          console.log('🚫 Käyttäjä on bannattu:', banStatus);
+        }
+      } catch (error) {
+        console.error('❌ Virhe banni-tilan tarkistuksessa:', error);
+      }
+    };
+
+    checkBanStatus();
+    
+    // Tarkista banni-tila säännöllisesti (5 min välein)
+    const interval = setInterval(checkBanStatus, 5 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, [user?.uid]);
 
   // Merkitse itsemme valmiiksi huoneessa - yksinkertaistettu
   useEffect(() => {
@@ -426,6 +453,17 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    // Tarkista onko käyttäjä bannattu
+    if (userBanStatus?.banned) {
+      if (userBanStatus.permanent) {
+        alert('🚫 Sinut on bannattu pysyvästi. Et voi lähettää kuvia.');
+      } else {
+        const timeLeft = userBanStatus.endsAt ? new Date(userBanStatus.endsAt).toLocaleString() : 'tuntematon';
+        alert(`⏰ Sinut on bannattu väliaikaisesti.\nBanni päättyy: ${timeLeft}\nSyy: ${userBanStatus.reason}`);
+      }
+      return;
+    }
+
     // Tarkista tiedostotyyppi
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
@@ -459,8 +497,18 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       const moderationResult = await moderateImage(imageData.url);
       
       if (moderationResult.flagged) {
-        const categories = moderationResult.categories?.join(', ') || 'Sopimaton sisältö';
-        alert(`🚫 Tämä kuva ei ole sallittu chatissa.\n📋 Syy: ${categories}`);
+        // Sopimaton kuva → välitön 24h banni (tai ikuinen jos 3. banni)
+        await handleInappropriateContent(
+          user.uid, 
+          BAN_REASONS.INAPPROPRIATE_IMAGE, 
+          roomId, 
+          { 
+            imageUrl: imageData.url,
+            reason: moderationResult.categories?.join(', ') || 'Sopimaton sisältö',
+            moderationType: 'openai_image',
+            scores: moderationResult.scores
+          }
+        );
         return;
       }
 
@@ -494,10 +542,21 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         fileInputRef.current.value = '';
       }
     }
-  }, [roomReady, roomId, user, profile, uploadImageToImgBB, moderateImage, scrollToBottom]);
+  }, [roomReady, roomId, user, profile, uploadImageToImgBB, moderateImage, scrollToBottom, userBanStatus]);
 
   const sendMessage = useCallback(async (e) => {
     e.preventDefault();
+    
+    // Tarkista onko käyttäjä bannattu
+    if (userBanStatus?.banned) {
+      if (userBanStatus.permanent) {
+        alert('🚫 Sinut on bannattu pysyvästi. Et voi lähettää viestejä.');
+      } else {
+        const timeLeft = userBanStatus.endsAt ? new Date(userBanStatus.endsAt).toLocaleString() : 'tuntematon';
+        alert(`⏰ Sinut on bannattu väliaikaisesti.\nBanni päättyy: ${timeLeft}\nSyy: ${userBanStatus.reason}`);
+      }
+      return;
+    }
     
     const messageText = newMessage.trim();
     if (!messageText || !roomReady) {
@@ -514,7 +573,17 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       console.log("📱 Offline moderation tulos:", offlineResult);
       
       if (offlineResult.isBlocked) {
-        alert(offlineResult.warningMessage || '🚫 Viesti estetty: sopimaton sisältö');
+        // Käsittele sopimaton sisältö bannijärjestelmän kautta
+        await handleInappropriateContent(
+          user.uid, 
+          BAN_REASONS.INAPPROPRIATE_TEXT, 
+          roomId, 
+          { 
+            message: messageText,
+            reason: offlineResult.warningMessage || 'Sopimaton sisältö',
+            moderationType: 'offline'
+          }
+        );
         setNewMessage('');
         return;
       }
@@ -575,8 +644,18 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
               reason = flaggedCategories;
             }
             
-            alert(`🚫 Viesti estetty OpenAI API:n toimesta\n📋 Syy: ${reason.join(', ')}`);
-            console.log('🚫 Estetty syyt:', reason);
+            // Käsittele sopimaton sisältö bannijärjestelmän kautta
+            await handleInappropriateContent(
+              user.uid, 
+              BAN_REASONS.INAPPROPRIATE_TEXT, 
+              roomId, 
+              { 
+                message: messageText,
+                reason: reason.join(', '),
+                moderationType: 'openai',
+                scores: scores
+              }
+            );
             setNewMessage('');
             return;
           }
@@ -657,7 +736,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         }
       }
     }
-  }, [newMessage, roomReady, user.uid, profile.displayName, roomId]); // Poistettu updateTypingStatus
+  }, [newMessage, roomReady, user.uid, profile.displayName, roomId, userBanStatus]); // Lisätty userBanStatus
 
   // Kuuntele localStorage-muutoksia (musiikki-asetukset)
   useEffect(() => {
@@ -1161,12 +1240,16 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
                 sendMessage({ preventDefault: () => {} });
               }
             }}
-            placeholder={roomReady ? "Kirjoita viesti..." : "Odotetaan toista käyttäjää..."}
+            placeholder={
+              userBanStatus?.banned 
+                ? (userBanStatus.permanent ? "Sinut on bannattu pysyvästi" : `Bannattu - päättyy ${userBanStatus.endsAt?.toLocaleString()}`)
+                : (roomReady ? "Kirjoita viesti..." : "Odotetaan toista käyttäjää...")
+            }
             className="chat-input"
             rows={1}
             maxLength={500}
             autoComplete="off"
-            disabled={!roomReady}
+            disabled={!roomReady || userBanStatus?.banned}
             inputMode="text"
             enterKeyHint="send"
             style={{ resize: 'none' }}
@@ -1185,10 +1268,14 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
             htmlFor="image-upload" 
             className={`chat-image-btn ${imageUploading ? 'image-uploading' : ''}`}
             style={{ 
-              pointerEvents: !roomReady || imageUploading ? 'none' : 'auto',
-              opacity: !roomReady || imageUploading ? 0.6 : 1 
+              pointerEvents: !roomReady || imageUploading || userBanStatus?.banned ? 'none' : 'auto',
+              opacity: !roomReady || imageUploading || userBanStatus?.banned ? 0.6 : 1 
             }}
-            title={imageUploading ? uploadProgress || "Lähettää kuvaa..." : "Lähetä kuva"}
+            title={
+              userBanStatus?.banned 
+                ? "Et voi lähettää kuvia (bannattu)"
+                : (imageUploading ? uploadProgress || "Lähettää kuvaa..." : "Lähetä kuva")
+            }
           >
             {imageUploading ? (
               <>
@@ -1209,7 +1296,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
           
           <button 
             type="submit" 
-            disabled={!newMessage.trim() || !roomReady}
+            disabled={!newMessage.trim() || !roomReady || userBanStatus?.banned}
             className="chat-send-btn"
           >
             <span className="send-arrow">➤</span>
