@@ -71,7 +71,7 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
       };
       
       // Luo profiili
-      const finalProfile = {
+      const profileData = {
         displayName: user.displayName,
         age: parseInt(profile.age), // Käytä lomakkeesta syötettyä ikää
         ageGroup: profile.age >= 18 ? '18+' : '15-17',
@@ -79,7 +79,9 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
         deviceFingerprint,
         createdAt: new Date().toISOString(),
         isGoogleUser: user.isGoogleUser || false
-      };      console.log("💾 Tallennettava profiilidata:", profileData);
+      };      
+      
+      console.log("💾 Tallennettava profiilidata:", profileData);
 
       // Tallenna vain Firestoreen - EI localStorage:iin
       await setDoc(doc(db, 'profiles', user.uid), profileData);
