@@ -38,8 +38,8 @@ function App() {
           console.log('🔄 Käsitellään OAuth callback...');
           console.log('📍 Current hash:', window.location.hash);
           
-          // Odota hetki että Supabase prosessoi hash-parametrit
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          // Lyhyempi viive: anna Supabaselle hetki prosessoida hash-parametrit
+          await new Promise(resolve => setTimeout(resolve, 800));
           
           // Hae session Supabasesta
           console.log('🔍 Haetaan session Supabasesta...');
@@ -95,15 +95,10 @@ function App() {
     }, []);
 
     return (
-      <div className="auth-callback-container">
-        <div className="callback-loading">
-          <h2>🔑 Kirjaudutaan sisään...</h2>
-          <p>Käsitellään Google-kirjautumista</p>
-          <div className="loading-spinner"></div>
-          <p style={{marginTop: '1rem', fontSize: '0.9rem', color: '#666'}}>
-            Debug: {window.location.hash ? 'Hash löytyi' : 'Ei hashia'}
-          </p>
-        </div>
+      <div className="oauth-fullscreen">
+        <div className="spinner"></div>
+        <h2>� Kirjaudutaan</h2>
+        <p>Yhdistetään Google-tiliin...</p>
       </div>
     );
   }
