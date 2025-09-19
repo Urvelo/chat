@@ -169,7 +169,6 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
               <ul>
                 <li>Käytämme automaattista moderointia epäasiallisen sisällön rajaamiseen</li>
                 <li>Sopimaton sisältö estetään</li>
-                <li>Asiallinen, tiedonhaun tai terveyskasvatuksen konteksti on sallittu</li>
                 <li>Häirintä ja uhkailu johtavat tilin estoon</li>
               </ul>
             </div>
@@ -185,16 +184,7 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
               </ul>
             </div>
             
-            <div className="welcome-section">
-              <h3>✅ Sallittua ja toivottua:</h3>
-              <ul>
-                <li>Ystävällinen ja turvallinen keskustelu</li>
-                <li>Harrastuksista ja kiinnostuksista puhuminen</li>
-                <li>Asialliset kysymykset</li>
-                <li>Tuki ja neuvonanto vaikeissa tilanteissa</li>
-                <li>Huumori</li>
-              </ul>
-            </div>
+            
             
             <div className="welcome-section">
               <h3>🔐 Yksityisyys ja tietosuoja:</h3>
@@ -212,17 +202,6 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
                 <li>Varoitus annetaan epäasiallisesta sisällöstä</li>
                 <li>Toistuvista ilmoituksista seuraa tilin esto</li>
                 <li>Vakavissa tapauksissa käyttö estetään välittömästi</li>
-              </ul>
-            </div>
-
-            <div className="welcome-section">
-              <h3>🖼️ Kuvakäytäntö:</h3>
-              <ul>
-                <li>Kuvien lähetys on sallittu vain 18+ Google-käyttäjille.</li>
-                <li>Kaikki kuvat moderoidaan automaattisesti (AI), sopimaton sisältö estetään.</li>
-                <li>Älä jaa kasvojasi tai henkilötietoja sisältäviä kuvia.</li>
-                <li>Ei paljastavaa, seksuaalista, väkivaltaista tai muuten sopimatonta sisältöä.</li>
-                <li>Rikkomuksista seuraa varoituksia tai tilin esto.</li>
               </ul>
             </div>
           </div>

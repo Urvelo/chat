@@ -366,6 +366,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
   // OpenAI kuvan moderointi - OIKEA ilmainen moderation API
   const moderateImage = useCallback(async (imageUrl) => {
     try {
+      
       console.log('🖼️ Moderoidaan kuvaa OpenAI moderation API:lla:', imageUrl);
       
       // Tarkista että API-avain on asetettu
