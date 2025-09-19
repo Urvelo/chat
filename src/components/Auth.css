@@ -77,64 +77,126 @@
   margin-bottom: 30px;
 }
 
-/* Yksinkertaiset toimivat napit */
+/* Googlen virallinen tyyli - Leveät ammattimaiset napit */
 .main-auth-btn {
   display: flex;
   align-items: center;
-  padding: 18px 20px;
-  border: none;
-  border-radius: 12px;
+  justify-content: flex-start;
+  padding: 14px 20px;
+  border: 1px solid #dadce0;
+  border-radius: 8px;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: all 0.15s ease;
   text-align: left;
   width: 100%;
-  font-family: inherit;
+  font-family: 'Google Sans', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
   text-decoration: none;
+  background: #ffffff;
+  color: #3c4043;
+  box-shadow: 0 1px 3px 0 rgba(60, 64, 67, 0.302), 0 4px 8px 3px rgba(60, 64, 67, 0.149);
+  position: relative;
+  overflow: hidden;
 }
 
 .main-auth-btn:hover {
-  transform: translateY(-1px);
+  background: #f8f9fa;
+  box-shadow: 0 2px 6px 2px rgba(60, 64, 67, 0.149), 0 8px 24px 4px rgba(60, 64, 67, 0.149);
+  border-color: #dadce0;
 }
 
-.anonymous-main-btn {
-  background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-  color: white;
+.main-auth-btn:active {
+  background: #f1f3f4;
+  box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.302), 0 2px 6px 2px rgba(60, 64, 67, 0.149);
 }
 
+.main-auth-btn:focus {
+  outline: none;
+  border-color: #4285f4;
+  box-shadow: 0 1px 3px 0 rgba(66, 133, 244, 0.302), 0 4px 8px 3px rgba(66, 133, 244, 0.149);
+}
+
+/* Google nappi - alkuperäinen sinivärinen */
 .google-main-btn {
-  background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
-  color: white;
+  background: #4285f4;
+  color: #ffffff;
+  border: 1px solid #4285f4;
+}
+
+.google-main-btn:hover {
+  background: #3367d6;
+  border-color: #3367d6;
+  box-shadow: 0 2px 6px 2px rgba(66, 133, 244, 0.149), 0 8px 24px 4px rgba(66, 133, 244, 0.149);
+}
+
+.google-main-btn:active {
+  background: #2d5aa0;
+  border-color: #2d5aa0;
+}
+
+/* Anonyymi nappi - harmaa kuten Googlen "Continue without account" */
+.anonymous-main-btn {
+  background: #ffffff;
+  color: #3c4043;
+  border: 1px solid #dadce0;
+}
+
+.anonymous-main-btn:hover {
+  background: #f8f9fa;
+  border-color: #dadce0;
 }
 
 .btn-icon {
-  font-size: 28px;
+  width: 20px;
+  height: 20px;
   margin-right: 16px;
-  width: 40px;
-  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
+  flex-shrink: 0;
 }
 
 .btn-icon .google-icon {
-  width: 32px;
-  height: 32px;
+  width: 20px;
+  height: 20px;
+  filter: none;
+}
+
+.google-main-btn .btn-icon .google-icon {
   filter: brightness(0) invert(1);
 }
 
+.anonymous-main-btn .btn-icon {
+  font-size: 20px;
+  color: #5f6368;
+}
+
+.btn-text {
+  flex: 1;
+}
+
 .btn-text h3 {
-  margin: 0 0 2px 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: white;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.google-main-btn .btn-text h3 {
+  color: #ffffff;
+}
+
+.anonymous-main-btn .btn-text h3 {
+  color: #3c4043;
 }
 
 .btn-text p {
-  margin: 0;
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.9);
+  margin: 2px 0 0 0;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+  opacity: 0.8;
 }
 
 /* Auth benefits - Kauniimpi */
