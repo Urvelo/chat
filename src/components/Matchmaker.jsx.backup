@@ -60,59 +60,67 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
     }
   }, [status]);
 
-    // Optimoitu siivous: vähemmän aggressiivinen ja tehokkaampi
+    // Aggressiivisempi siivous vanhoille käyttäjille ja huoneille
   useEffect(() => {
-    const optimizedCleanup = async () => {
+    const aggressiveCleanup = async () => {
       try {
         const now = Date.now();
-        const TEN_MINUTES_AGO = now - (10 * 60 * 1000); // Kasvatettu 5min -> 10min
+        const FIVE_MINUTES_AGO = now - (5 * 60 * 1000); // Muutettu 2min -> 5min (vähemmän aggressiivinen)
         
-        console.log("🧹 Suoritetaan kevyt siivous...");
+        // 1. Siivoa vanhat waiting-käyttäjät (yli 5 min odottaneet)
+        const waitingSnapshot = await getDocs(collection(db, 'waiting'));
+        const staleWaitingUsers = [];
         
-        // Käytä vain yhdistettyjä kyselyitä ja ehtojen optimointia
-        const [waitingSnapshot, roomsSnapshot] = await Promise.all([
-          getDocs(collection(db, 'waiting')),
-          getDocs(collection(db, 'rooms'))
-        ]);
-        
-        // Siivoa vain jos löytyy paljon vanhentuneita dokumentteja
-        const staleWaiting = waitingSnapshot.docs.filter(doc => {
-          const age = now - (doc.data().timestamp || 0);
-          return age > TEN_MINUTES_AGO;
+        waitingSnapshot.docs.forEach(waitingDoc => {
+          const data = waitingDoc.data();
+          const userAge = now - (data.timestamp || 0);
+          
+          if (userAge > FIVE_MINUTES_AGO) {
+            console.log("🗑️ Poistetaan vanha waiting-käyttäjä:", waitingDoc.id, "ikä:", Math.round(userAge / 1000), "s");
+            staleWaitingUsers.push(deleteDoc(doc(db, 'waiting', waitingDoc.id)));
+          }
         });
         
-        const staleRooms = roomsSnapshot.docs.filter(doc => {
-          const data = doc.data();
-          const age = now - (data.createdAt?.toDate?.()?.getTime() || 0);
-          return age > TEN_MINUTES_AGO || data.isActive === false;
-        });
-        
-        // Siivoa vain jos kannattaa (yli 3 dokumenttia)
-        if (staleWaiting.length > 3) {
-          console.log(`🗑️ Siivotaan ${staleWaiting.length} vanhaa waiting-käyttäjää`);
-          await Promise.all(staleWaiting.map(doc => deleteDoc(doc.ref)));
+        if (staleWaitingUsers.length > 0) {
+          await Promise.all(staleWaitingUsers);
+          console.log(`✅ Siivottiin ${staleWaitingUsers.length} vanhaa waiting-käyttäjää`);
         }
         
-        if (staleRooms.length > 3) {
-          console.log(`🗑️ Siivotaan ${staleRooms.length} vanhaa huonetta`);
-          await Promise.all(staleRooms.map(doc => deleteDoc(doc.ref)));
+        // 2. Siivoa vanhat tai epäaktiiviset huoneet (yli 5 min tai isActive:false)
+        const roomsSnapshot = await getDocs(collection(db, 'rooms'));
+        const staleRooms = [];
+        
+        roomsSnapshot.docs.forEach(roomDoc => {
+          const data = roomDoc.data();
+          const roomAge = now - (data.createdAt?.toDate?.()?.getTime() || 0);
+          
+          // Poista yli 5 minuuttia vanhat tai epäaktiiviset huoneet
+          if (roomAge > FIVE_MINUTES_AGO || data.isActive === false) {
+            console.log("🗑️ Poistetaan vanha/epäaktiivinen huone:", roomDoc.id, "ikä:", Math.round(roomAge / 1000), "s", "isActive:", data.isActive);
+            staleRooms.push(deleteDoc(doc(db, 'rooms', roomDoc.id)));
+          }
+        });
+        
+        if (staleRooms.length > 0) {
+          await Promise.all(staleRooms);
+          console.log(`✅ Siivottiin ${staleRooms.length} vanhaa huonetta`);
         }
         
       } catch (error) {
-        console.error("❌ Virhe optimoidussa siivouksessa:", error);
+        console.error("❌ Virhe aggressiivisessa siivouksessa:", error);
       }
     };
 
-    // Siivous vain kerran komponentin latauksen yhteydessä
-    optimizedCleanup();
+    // Suorita siivous heti kun Matchmaker latautuu
+    aggressiveCleanup();
     
-    // Sitten harvemmmin - 5 minuutin välein sen sijaan että 30s
-    const interval = setInterval(optimizedCleanup, 5 * 60 * 1000);
+    // Sitten joka 30 sekunnin välein (vähemmän aggressiivinen)
+    const interval = setInterval(aggressiveCleanup, 30000);
     
     return () => clearInterval(interval);
   }, []);
 
-  // Cleanup musiikki ja timeoutit kun komponentti poistuu
+  // Cleanup musiikki kun komponentti poistuu
   useEffect(() => {
     return () => {
       // Pysäytä musiikki kun poistutaan Matchmaker-komponentista
@@ -120,12 +128,6 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
         window.backgroundMusic.pause();
         window.backgroundMusic.currentTime = 0;
         window.backgroundMusic = null;
-      }
-      
-      // 🔧 MEMORY LEAK FIX: Siivoa fallback timeout
-      if (window.matchmakerFallbackTimeout) {
-        clearTimeout(window.matchmakerFallbackTimeout);
-        window.matchmakerFallbackTimeout = null;
       }
     };
   }, []);
@@ -476,75 +478,104 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
 
       console.log("Lisätty waiting listaan:", user.uid, "nimi:", workingProfile.displayName, "ageGroup:", workingProfile.ageGroup);
       
-      // 🚀 OPTIMOITU QUERY: Kuuntele ensisijaisesti omaa ikäryhmää
-      const primaryQuery = query(
-        collection(db, 'waiting'),
-        where('ageGroup', '==', workingProfile.ageGroup)
-      );
+      // Kuuntele waiting-listaa ja etsi match (optimoitu versio)
+      const q = query(collection(db, 'waiting'));
+
+      console.log("Aloitetaan kuuntelu waiting listaa...");
       
-      // Fallback: jos ei löydy samasta ikäryhmästä, kuuntele kaikkia
-      let fallbackTimeout;
+      // Debounce matching - vältetään liian nopeat peräkkäiset matchit
+      let matchingTimeout;
       
-      console.log("Aloitetaan kuuntelu omaa ikäryhmää:", workingProfile.ageGroup);
-      
-      // 📊 PERFORMANCE TRACKING: Aloita matching mittaus
-      const matchingStartTime = performance.now();
-      const matchingMetrics = {
-        startTime: matchingStartTime,
-        ageGroup: workingProfile.ageGroup,
-        waitingUsersChecked: 0,
-        queryExecutions: 0
-      };
-      
-      const unsubscribe = onSnapshot(primaryQuery, async (snapshot) => {
-        matchingMetrics.queryExecutions++;
-        matchingMetrics.waitingUsersChecked = snapshot.size;
+      const unsubscribe = onSnapshot(q, async (snapshot) => {
+        // Peruuta edellinen matching jos uusi snapshot tulee nopeasti
+        if (matchingTimeout) {
+          clearTimeout(matchingTimeout);
+        }
         
-        console.log(`onSnapshot (ageGroup ${workingProfile.ageGroup}), löytyi dokumentteja:`, snapshot.size);
-        
-        if (!snapshot.empty && isSearching) {
-          // 🔒 RACE CONDITION PROTECTION: Tarkista että ei ole jo aktiivista huonetta
-          const preCheckQuery = query(
-            collection(db, 'rooms'),
-            where('userIds', 'array-contains', user.uid),
-            where('isActive', '==', true)
-          );
+        matchingTimeout = setTimeout(async () => {
+          console.log("onSnapshot triggered, löytyi dokumentteja:", snapshot.size);
           
-          const preCheckSnapshot = await getDocs(preCheckQuery);
-          if (!preCheckSnapshot.empty) {
-            console.log("⚠️ Pre-check: Käyttäjällä on jo aktiivinen huone, lopetetaan haku");
-            unsubscribe();
-            return;
+          if (!snapshot.empty && isSearching) {
+            const allWaitingUsers = snapshot.docs
+              .map(doc => ({
+                id: doc.id,
+                ...doc.data()
+              }))
+              .filter(waitingUser => waitingUser.uid !== user.uid); // Suodata oma uid pois
+            
+            console.log("Waiting käyttäjät (ilman omaa):", allWaitingUsers);
+            
+            if (allWaitingUsers.length > 0) {
+              // 🔒 RACE CONDITION ESTO: Tarkista ENSIN että ei ole aktiivista huonetta
+              const preCheckQuery = query(
+                collection(db, 'rooms'),
+                where('userIds', 'array-contains', user.uid),
+                where('isActive', '==', true)
+              );
+              
+              const preCheckSnapshot = await getDocs(preCheckQuery);
+              if (!preCheckSnapshot.empty) {
+                console.log("⚠️ Pre-check: Käyttäjällä on jo aktiivinen huone, lopetetaan haku");
+                unsubscribe();
+                return;
+              }
+              
+              // 🎯 IKÄPOHJAINEN MATCHING: nuorimmat yhdistetään ensisijaisesti
+              const userAge = calculateAge(user.profile?.dateOfBirth);
+              const isMinor = userAge < 18;
+              
+              // Suodata ikäryhmän mukaan ja järjestä nuorimmat ensin
+              const compatibleUsers = allWaitingUsers
+                .filter(waitingUser => {
+                  const waitingUserAge = calculateAge(waitingUser.dateOfBirth);
+                  const waitingUserIsMinor = waitingUserAge < 18;
+                  return isMinor === waitingUserIsMinor; // Sama ikäryhmä
+                })
+                .sort((a, b) => {
+                  const ageA = calculateAge(a.dateOfBirth);
+                  const ageB = calculateAge(b.dateOfBirth);
+                  return ageA - ageB; // Nuorimmat ensin
+                });
+              
+              console.log(`Ikäryhmä ${isMinor ? '15-17' : '18+'}: ${compatibleUsers.length} käyttäjää`);
+              
+              if (compatibleUsers.length > 0) {
+                const selectedUser = compatibleUsers[0]; // Nuorin käyttäjä
+                console.log("Valittu käyttäjä:", selectedUser);
+                
+                // 🔒 ATOMIC ROOM CREATION: Kokeile luoda huone vain kerran
+                try {
+                  await createRoom(user, selectedUser);
+                  unsubscribe(); // Lopeta kuuntelu onnistuneen matchin jälkeen
+                } catch (error) {
+                  console.error("Huoneen luonti epäonnistui:", error);
+                  // Jatka kuuntelua
+                }
+              }
+            }
           }
-          
-          const allWaitingUsers = snapshot.docs
-            .map(doc => ({
-              id: doc.id,
-              ...doc.data()
-            }))
-            .filter(waitingUser => waitingUser.uid !== user.uid); // Suodata oma uid pois
-          
-          console.log("Waiting käyttäjät (ilman omaa):", allWaitingUsers);
-          
-          if (allWaitingUsers.length > 0) {
-            // 🎯 OPTIMOITU: Kaikki löydetyt ovat samasta ikäryhmästä, valitse nuorin
-            allWaitingUsers.sort((a, b) => (a.age || 18) - (b.age || 18));
-            const selectedUser = allWaitingUsers[0];
-            console.log("🎯 Valittu nuorin samasta ikäryhmästä:", selectedUser.age, "vuotta");
+        }, 300); // 300ms debounce
+      });
+      
+      // Tallenna unsubscribe funktio myöhempää käyttöä varten
+      setUnsubscribe(() => unsubscribe);
+            let selectedUser;
             
-            console.log("Löytyi match (sama ikäryhmä):", selectedUser);
+            // Ensisijainen: sama ikäryhmä, nuorimmat keskenään
+            const sameAgeGroup = allWaitingUsers.filter(u => u.ageGroup === workingProfile.ageGroup);
+            if (sameAgeGroup.length > 0) {
+              // Järjestä iän mukaan (nuorin ensin) ja valitse nuorin
+              sameAgeGroup.sort((a, b) => (a.age || 18) - (b.age || 18));
+              selectedUser = sameAgeGroup[0];
+              console.log("🎯 Valittu sama ikäryhmä, nuorin:", selectedUser.age, "vuotta");
+            } else {
+              // Fallback: eri ikäryhmä, mutta silti nuorin
+              allWaitingUsers.sort((a, b) => (a.age || 18) - (b.age || 18));
+              selectedUser = allWaitingUsers[0];
+              console.log("🔄 Fallback: eri ikäryhmä, nuorin:", selectedUser.age, "vuotta");
+            }
             
-            // 📊 PERFORMANCE METRICS: Kirjaa matching-aika
-            const matchingEndTime = performance.now();
-            const matchingDuration = matchingEndTime - matchingMetrics.startTime;
-            
-            console.log(`🏆 MATCHING METRICS:`, {
-              duration: `${matchingDuration.toFixed(2)}ms`,
-              ageGroup: matchingMetrics.ageGroup,
-              waitingUsersChecked: matchingMetrics.waitingUsersChecked,
-              queryExecutions: matchingMetrics.queryExecutions,
-              matchType: 'primary-agegroup'
-            });
+            console.log("Löytyi match (ikäpohjainen):", selectedUser);
             
             // 🔒 TARKISTA VIELÄ KERRAN että meillä ei ole jo huonetta tämän käyttäjän kanssa
             const doubleCheckQuery = query(
@@ -579,51 +610,6 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
               await createChatRoom(selectedUser);
             }
           }
-        } else if (isSearching) {
-          // 🔄 FALLBACK: Jos omasta ikäryhmästä ei löydy ketään, kokeile 10s kuluttua kaikkia
-          if (!fallbackTimeout) {
-            console.log("⏳ Ei löytynyt omasta ikäryhmästä, aloitetaan fallback 10s kuluttua...");
-            window.matchmakerFallbackTimeout = setTimeout(async () => {
-              if (!isSearching) return; // Lopetettu jo
-              
-              console.log("🔄 Fallback: kuunnellaan kaikkia ikäryhmiä...");
-              
-              // Vaihda kuuntelemaan kaikkia käyttäjiä  
-              unsubscribe(); // Lopeta nykyinen listener
-              
-              const fallbackQuery = query(collection(db, 'waiting'));
-              const fallbackUnsubscribe = onSnapshot(fallbackQuery, async (fallbackSnapshot) => {
-                if (!fallbackSnapshot.empty && isSearching) {
-                  const allUsers = fallbackSnapshot.docs
-                    .map(doc => ({ id: doc.id, ...doc.data() }))
-                    .filter(u => u.uid !== user.uid);
-                    
-                  if (allUsers.length > 0) {
-                    // Valitse nuorin kaikista
-                    allUsers.sort((a, b) => (a.age || 18) - (b.age || 18));
-                    const selectedUser = allUsers[0];
-                    console.log("🔄 Fallback match:", selectedUser);
-                    
-                    // 📊 FALLBACK METRICS
-                    const fallbackEndTime = performance.now();
-                    const totalDuration = fallbackEndTime - matchingMetrics.startTime;
-                    
-                    console.log(`🔄 FALLBACK METRICS:`, {
-                      totalDuration: `${totalDuration.toFixed(2)}ms`,
-                      fallbackDelay: '10000ms',
-                      matchType: 'fallback-all-ages'
-                    });
-                    
-                    setStatus('Löytyi match! Luodaan chat...');
-                    fallbackUnsubscribe();
-                    await createChatRoom(selectedUser);
-                  }
-                }
-              });
-              
-              setUnsubscribe(() => fallbackUnsubscribe);
-            }, 10000); // 10 sekunnin fallback
-          }
         }
       }, (error) => {
         console.error("Virhe waiting lista kuuntelussa:", error);
@@ -641,7 +627,7 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
     }
   };
 
-  // Lopeta etsintä ja siivoa kaikki resurssit
+  // Lopeta etsintä
   const stopSearching = async () => {
     try {
       setIsSearching(false);
@@ -652,12 +638,6 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
       if (unsubscribe) {
         unsubscribe();
         setUnsubscribe(null);
-      }
-      
-      // 🔧 MEMORY LEAK FIX: Siivoa fallback timeout
-      if (window.matchmakerFallbackTimeout) {
-        clearTimeout(window.matchmakerFallbackTimeout);
-        window.matchmakerFallbackTimeout = null;
       }
       
       // Poista itsemme waiting-listasta

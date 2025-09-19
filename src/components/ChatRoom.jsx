@@ -83,6 +83,13 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         
         // Yksinkertainen: jos huone on olemassa ja meillä on data, chat on valmis
         const isReady = true; // Aina valmis jos huone löytyy
+        console.log("🔄 ChatRoom ready status:", { 
+          roomReady: isReady, 
+          roomId, 
+          imageUploading,
+          userBanned: userBanStatus?.banned,
+          imgbbKey: !!import.meta.env.VITE_IMGBB_API_KEY
+        });
         setRoomReady(isReady);
         setWaitingForOther(false);
       } else {
@@ -1546,7 +1553,9 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
                 ? "Et voi lähettää kuvia (bannattu)"
                 : (!import.meta.env.VITE_IMGBB_API_KEY
                     ? "Kuvan lähetys pois käytöstä: ImgBB API-avain puuttuu"
-                    : (imageUploading ? uploadProgress || "Lähettää kuvaa..." : "Lähetä kuva"))
+                    : (!roomReady 
+                        ? `Huone ei valmis (roomReady: ${roomReady})`
+                        : (imageUploading ? uploadProgress || "Lähettää kuvaa..." : "Lähetä kuva")))
             }
           >
             {imageUploading ? (
