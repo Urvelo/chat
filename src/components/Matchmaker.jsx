@@ -14,7 +14,14 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
   const [playMusic, setPlayMusic] = useState(() => localStorage.getItem("playMusic") !== "false");
 
   // Debug loggaus
-  console.log("Matchmaker saanut props:", { user, profile });
+  console.log("Matchmaker saanut props:", { 
+    user: !!user, 
+    profile: !!profile,
+    userAge: user?.age,
+    profileAge: profile?.age,
+    profileAgeGroup: profile?.ageGroup,
+    profileDisplayName: profile?.displayName
+  });
 
   // Kuuntele odottavia käyttäjiä (KAIKKI, ei vain sama ikäryhmä)
   useEffect(() => {
@@ -220,9 +227,21 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
         return;
       }
       
+      // Korjaa oma profiili jos ageGroup puuttuu (sama logiikka kuin startSearching:ssä)
+      let workingProfile = { ...profile };
+      if (!workingProfile.ageGroup) {
+        console.log("🔧 Korjataan profiili createChatRoom:ssa - lisätään ageGroup");
+        const calculateAgeGroup = (age) => {
+          if (age >= 15 && age <= 17) return '15-17';
+          return '18+';
+        };
+        const ageToUse = user.age || profile.age || 18;
+        workingProfile.ageGroup = calculateAgeGroup(ageToUse);
+      }
+      
       // Validoi oma profiili
-      if (!profile?.displayName || !profile?.ageGroup) {
-        console.error("❌ Oma profiili puutteellinen:", profile);
+      if (!workingProfile?.displayName || !workingProfile?.ageGroup) {
+        console.error("❌ Oma profiili puutteellinen:", workingProfile);
         setStatus('error');
         return;
       }
@@ -259,7 +278,7 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
         users: [
           {
             uid: user.uid,
-            displayName: profile.displayName,
+            displayName: workingProfile.displayName,
             joinedAt: Date.now(),
             ready: false // Aluksi ei valmis
           },
@@ -270,7 +289,7 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
             ready: false // Aluksi ei valmis
           }
         ],
-        ageGroup: profile.ageGroup,
+        ageGroup: workingProfile.ageGroup,
         createdAt: serverTimestamp(),
         isActive: true,
         bothReady: false, // Molemmat eivät vielä valmiita
@@ -386,6 +405,7 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
       let workingProfile = { ...profile };
       if (!workingProfile.ageGroup) {
         console.log("Korjataan profiili - lisätään ageGroup");
+        console.log("user.age:", user.age, "profile.age:", profile.age, "profile:", profile);
         
         // Laske ikäryhmä käyttäjän iän perusteella
         const calculateAgeGroup = (age) => {
@@ -393,7 +413,9 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
           return '18+'; // Kaikki 18+ samaan ryhmään
         };
         
-        workingProfile.ageGroup = calculateAgeGroup(user.age);
+        const ageToUse = user.age || profile.age || 18; // Fallback 18
+        workingProfile.ageGroup = calculateAgeGroup(ageToUse);
+        console.log("Laskettu ageGroup:", workingProfile.ageGroup, "iälle:", ageToUse);
         
         // Päivitä Firestore taustalla
         try {
