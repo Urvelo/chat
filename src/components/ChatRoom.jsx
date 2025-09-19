@@ -479,6 +479,21 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         harassment: 0.9
       };
 
+      // 🧪 DEBUG MODE: Aseta ympäristömuuttuja VITE_DEBUG_MODERATION=true testaamista varten
+      const isDebugMode = import.meta.env.VITE_DEBUG_MODERATION === 'true';
+      if (isDebugMode) {
+        console.log('🧪 DEBUG MODE: Moderointi asetettu tiukaksi testaamista varten');
+        // Testaa bannijärjestelmää käyttämällä matalampaa kynnystä
+        if (scores['sexual'] > 0.01 || scores['violence'] > 0.01) {
+          console.log('🧪 DEBUG: Testataan bannia matalalla kynnyksellä');
+          return {
+            flagged: true,
+            categories: ['debug_test'],
+            scores
+          };
+        }
+      }
+
       // 1) Estä aina alaikäisiin liittyvä seksi
       const minorsScore = scores['sexual/minors'] || 0;
       if (categories['sexual/minors'] || minorsScore > THRESHOLDS['sexual/minors']) {
