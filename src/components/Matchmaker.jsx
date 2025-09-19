@@ -20,7 +20,9 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
     userAge: user?.age,
     profileAge: profile?.age,
     profileAgeGroup: profile?.ageGroup,
-    profileDisplayName: profile?.displayName
+    profileDisplayName: profile?.displayName,
+    status: status,
+    isSearching: isSearching
   });
 
   // Kuuntele odottavia käyttäjiä (KAIKKI, ei vain sama ikäryhmä)
@@ -334,7 +336,14 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
 
   // Aloita käyttäjien etsintä
   const startSearching = async () => {
+    console.log("🚀 startSearching kutsuttu");
+    if (isSearching) {
+      console.log("⚠️ Haku on jo käynnissä, ohitetaan");
+      return;
+    }
+    
     try {
+      console.log("🧹 Aloitetaan siivous...");
       // 🧹 SIIVOA ENSIN: Poista kaikki vanhat jäänteet tältä käyttäjältä
       try {
         // Poista mahdollinen vanha waiting-merkintä
@@ -367,15 +376,18 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
         console.warn("⚠️ Siivous epäonnistui osittain:", cleanupError);
       }
       
+      console.log("🔐 Tarkistetaan bannit...");
       // Tarkista onko käyttäjä bannattu tai temp-bannattu
       const profileRef = doc(db, 'profiles', user.uid);
       const profileSnap = await getDoc(profileRef);
       
       if (profileSnap.exists()) {
+        console.log("📋 Profiili löytyi, tarkistetaan bannit");
         const profileData = profileSnap.data();
         
         // Tarkista ikuinen bänni
         if (profileData.banned) {
+          console.log("🚫 Käyttäjä on bannattu pysyvästi");
           alert('Et voi käyttää palvelua. Syy: ' + (profileData.bannedReason || 'Käyttöehtojen rikkominen'));
           return;
         }
@@ -401,6 +413,7 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
         }
       }
       
+      console.log("🔧 Tarkistetaan ja korjataan profiili...");
       // Korjaa profiili jos ageGroup puuttuu
       let workingProfile = { ...profile };
       if (!workingProfile.ageGroup) {
@@ -602,6 +615,14 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
             className="feedback-link-btn"
           >
             💬 Anna palautetta
+          </button>
+        </div>
+        
+        {/* DEBUG: Näytä status ja reset-nappi */}
+        <div style={{padding: '10px', border: '1px solid #ccc', margin: '10px 0', fontSize: '12px'}}>
+          <p>🐛 DEBUG: Status = "{status}", isSearching = {isSearching.toString()}</p>
+          <button onClick={() => { setStatus('idle'); setIsSearching(false); }}>
+            🔄 Reset tilaan idle
           </button>
         </div>
         
