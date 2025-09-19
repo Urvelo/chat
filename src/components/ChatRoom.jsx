@@ -534,15 +534,18 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       return;
     }
 
-    // UUSI: Tarkista että käyttäjä on 18+ JA Google-käyttäjä
-    if (!user?.isGoogleUser) {
-      alert('🚫 Vain Google-tilillä kirjautuneet voivat lähettää kuvia.');
-      return;
-    }
-
+    // Tarkista että käyttäjä on 18+ (Google-käyttäjyys ei pakollinen, mutta suositeltava)
     if (!profile?.age || profile.age < 18) {
       alert('🚫 Vain 18+ vuotiaat voivat lähettää kuvia.');
       return;
+    }
+
+    // Varoita jos ei Google-käyttäjä, mutta salli silti
+    if (!user?.isGoogleUser) {
+      const confirmUpload = confirm('⚠️ Suosittelemme Google-tiliä kuvapalveluun.\n\nJatka kuitenkin kuvan lähetystä?');
+      if (!confirmUpload) {
+        return;
+      }
     }
 
     // Tarkista tiedostotyyppi
@@ -570,12 +573,14 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     try {
     // 1. Lataa kuva ImgBB:hen (24h auto-poisto)
     setUploadProgress('Ladataan kuvaa palvelimelle...');
-    const imageData = await uploadImageToImgBB(file);
-    console.log('✅ Kuva ladattu ImgBB:hen:', imageData);
+    
+    try {
+      const imageData = await uploadImageToImgBB(file);
+      console.log('✅ Kuva ladattu ImgBB:hen:', imageData);
 
       // 2. Moderoi kuva OpenAI:lla
       setUploadProgress('Tarkistetaan kuvan sisältöä...');
-    const moderationResult = await moderateImage(imageData.url);
+      const moderationResult = await moderateImage(imageData.url);
       
       if (moderationResult.flagged) {
         // Sopimaton kuva → välitön 24h banni (tai ikuinen jos 3. banni)
@@ -611,10 +616,33 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
 
       console.log('✅ Kuvaviesti lähetetty');
       scrollToBottom();
+      
+    } catch (uploadError) {
+      console.error('❌ Kuvan upload/moderointi epäonnistui:', uploadError);
+      
+      // Tarkista onko API-avain puuttuu
+      if (uploadError.message?.includes('API-avain puuttuu')) {
+        alert('❌ Kuvien lähetys ei ole käytössä: ImgBB API-avain puuttuu.\n\nOta yhteyttä ylläpitoon.');
+      } else if (uploadError.message?.includes('ImgBB API virhe')) {
+        alert('❌ Kuvan lataus epäonnistui palvelimelle.\n\nYritä uudelleen hetken päästä.');
+      } else if (uploadError.message?.includes('moderation')) {
+        alert('❌ Kuvan sisällön tarkistus epäonnistui.\n\nYritä uudelleen.');
+      } else {
+        alert('❌ Kuvan lähetys epäonnistui.\n\nTarkista internetyhteytesi ja yritä uudelleen.');
+      }
+      
+      throw uploadError; // Siirry catch-lohkoon
+    }
 
     } catch (error) {
       console.error('❌ Kuvan lähetys epäonnistui:', error);
-      alert('❌ Kuvan lähetys epäonnistui. Yritä uudelleen.');
+      
+      // Virheilmoitus on jo näytetty upload-lohkossa, ei tuplaa
+      if (!error.message?.includes('API-avain puuttuu') && 
+          !error.message?.includes('ImgBB API virhe') && 
+          !error.message?.includes('moderation')) {
+        alert('❌ Kuvan lähetys epäonnistui. Yritä uudelleen.');
+      }
     } finally {
       setImageUploading(false);
       setUploadProgress('');
@@ -925,20 +953,43 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     }
   }, [roomId, user?.uid, user?.displayName, onLeaveRoom]);
 
-  // Sulje huone automaattisesti kun sivu piilotetaan/poistutaan
+  // Sulje huone automaattisesti kun sivu piilotetaan/poistutaan VAIN PITKÄN VIIVEEN JÄLKEEN
   useEffect(() => {
     if (!roomId || !user?.uid) return;
 
+    let visibilityTimer = null;
+    let isPageHiding = false;
+
     const onVisibilityChange = () => {
       if (document.hidden) {
-        // Sulje nopeasti kun välilehti piilotetaan
-        fastCloseRoom('visibilitychange');
+        // Kun sivu piilotetaan, aseta 60 sekunnin timer
+        isPageHiding = true;
+        console.log('👁️ Sivu piilotettu, asetetaan 60s timer...');
+        
+        visibilityTimer = setTimeout(() => {
+          if (isPageHiding && document.hidden) {
+            console.log('⏰ 60 sekuntia kulunut piiloitettuna, suljetaan huone');
+            fastCloseRoom('visibilitychange-timeout');
+          }
+        }, 60000); // 60 sekuntia
+      } else {
+        // Kun sivu tulee takaisin näkyviin, peruuta timer
+        isPageHiding = false;
+        if (visibilityTimer) {
+          console.log('👁️ Sivu tuli takaisin näkyviin, peruutetaan timer');
+          clearTimeout(visibilityTimer);
+          visibilityTimer = null;
+        }
       }
     };
 
-    const onPageHide = () => fastCloseRoom('pagehide');
+    const onPageHide = () => {
+      // pagehide on lopullinen - sulje heti
+      fastCloseRoom('pagehide');
+    };
+    
     const onBeforeUnload = () => {
-      // beforeunloadissa teemme vain nopean sulun; ei alertteja
+      // beforeunload - sulje heti
       fastCloseRoom('beforeunload');
     };
 
@@ -947,6 +998,10 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     window.addEventListener('beforeunload', onBeforeUnload);
 
     return () => {
+      isPageHiding = false;
+      if (visibilityTimer) {
+        clearTimeout(visibilityTimer);
+      }
       document.removeEventListener('visibilitychange', onVisibilityChange);
       window.removeEventListener('pagehide', onPageHide);
       window.removeEventListener('beforeunload', onBeforeUnload);
