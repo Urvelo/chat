@@ -93,7 +93,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         console.log("  - all env vars:", import.meta.env);
         console.log("  - profileAge:", profile?.age);
         console.log("  - isOver18:", profile?.age >= 18);
-        console.log("  - imageButtonDisabled:", (!isReady || imageUploading || userBanStatus?.banned || !profile?.age || profile.age < 18));
+        console.log("  - imageButtonDisabled:", (!isReady || imageUploading || userBanStatus?.banned || !import.meta.env.VITE_IMGBB_API_KEY || !profile?.age || profile.age < 18));
         setRoomReady(isReady);
         setWaitingForOther(false);
       } else {
@@ -372,11 +372,11 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     const formData = new FormData();
     formData.append('image', file);
 
-    const API_KEY = import.meta.env.VITE_IMGBB_API_KEY || 'b758ed1b7d747547e4ae4572aca54f79'; // Fallback API-avain
+    const API_KEY = import.meta.env.VITE_IMGBB_API_KEY; // Aseta .env:iin
     const EXPIRATION_24H = 24 * 60 * 60; // sekuntia
 
     if (!API_KEY) {
-      throw new Error('ImgBB API-avain puuttuu (VITE_IMGBB_API_KEY)');
+      throw new Error('ImgBB API-avain puuttuu (VITE_IMGBB_API_KEY). Tarkista .env tiedosto.');
     }
 
     const response = await fetch(`https://api.imgbb.com/1/upload?key=${API_KEY}&expiration=${EXPIRATION_24H}`, {
@@ -1556,7 +1556,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
               console.log("  - imgbbKey:", !!import.meta.env.VITE_IMGBB_API_KEY);
               console.log("  - profileAge:", profile?.age);
               console.log("  - isOver18:", profile?.age >= 18);
-              const disabled = (!roomReady || imageUploading || userBanStatus?.banned || !profile?.age || profile.age < 18);
+              const disabled = (!roomReady || imageUploading || userBanStatus?.banned || !import.meta.env.VITE_IMGBB_API_KEY || !profile?.age || profile.age < 18);
               console.log("  - shouldBeDisabled:", disabled);
               if (disabled) {
                 console.log("❌ Button should be disabled!");
@@ -1565,17 +1565,19 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
               }
             }}
             style={{ 
-              pointerEvents: (!roomReady || imageUploading || userBanStatus?.banned || !profile?.age || profile.age < 18) ? 'none' : 'auto',
-              opacity: (!roomReady || imageUploading || userBanStatus?.banned || !profile?.age || profile.age < 18) ? 0.6 : 1 
+              pointerEvents: (!roomReady || imageUploading || userBanStatus?.banned || !import.meta.env.VITE_IMGBB_API_KEY || !profile?.age || profile.age < 18) ? 'none' : 'auto',
+              opacity: (!roomReady || imageUploading || userBanStatus?.banned || !import.meta.env.VITE_IMGBB_API_KEY || !profile?.age || profile.age < 18) ? 0.6 : 1 
             }}
             title={
               userBanStatus?.banned 
                 ? "Et voi lähettää kuvia (bannattu)"
-                : ((!profile?.age || profile.age < 18)
-                    ? "Kuvan lähetys vain 18+ käyttäjille"
-                    : (!roomReady 
-                        ? `Huone ei valmis (roomReady: ${roomReady})`
-                        : (imageUploading ? uploadProgress || "Lähettää kuvaa..." : "Lähetä kuva")))
+                : (!import.meta.env.VITE_IMGBB_API_KEY
+                    ? "Kuvan lähetys pois käytöstä: ImgBB API-avain puuttuu"
+                    : ((!profile?.age || profile.age < 18)
+                        ? "Kuvan lähetys vain 18+ käyttäjille"
+                        : (!roomReady 
+                            ? `Huone ei valmis (roomReady: ${roomReady})`
+                            : (imageUploading ? uploadProgress || "Lähettää kuvaa..." : "Lähetä kuva"))))
             }
           >
             {imageUploading ? (
