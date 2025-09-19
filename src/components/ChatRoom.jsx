@@ -345,7 +345,41 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     }, 1000); // 1 sekunnin kuluttua lopettaa typing
   }, [roomId, user?.uid]); // Yksinkertaisemmat riippuvuudet
 
-  // Yksityinen kuva-upload Firebase Storageen
+  // ImgBB kuvan upload (24h auto-poisto)
+  const uploadImageToImgBB = useCallback(async (file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const API_KEY = import.meta.env.VITE_IMGBB_API_KEY; // Aseta .env:iin
+    const EXPIRATION_24H = 24 * 60 * 60; // sekuntia
+
+    if (!API_KEY) {
+      throw new Error('ImgBB API-avain puuttuu (VITE_IMGBB_API_KEY)');
+    }
+
+    const response = await fetch(`https://api.imgbb.com/1/upload?key=${API_KEY}&expiration=${EXPIRATION_24H}`, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`ImgBB API virhe: ${response.status} ${text}`);
+    }
+
+    const data = await response.json();
+    if (!data.success) {
+      throw new Error('ImgBB upload epäonnistui');
+    }
+
+    return {
+      url: data.data.display_url,
+      deleteUrl: data.data.delete_url,
+      expiration: data.data.expiration
+    };
+  }, []);
+
+  // Yksityinen kuva-upload Firebase Storageen (ei käytössä, jätetään talteen)
   const uploadImageToPrivateStorage = useCallback(async (file, roomId, userId) => {
     // Luo yksilöllinen polku private-kansioon
     const ext = file.name.split('.').pop() || 'jpg';
@@ -523,14 +557,14 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     setUploadProgress('Tarkistetaan tiedostoa...');
 
     try {
-  // 1. Lataa kuva yksityiseen Storage-kansioon
-  setUploadProgress('Ladataan kuvaa yksityiseen kansioon...');
-  const imageData = await uploadImageToPrivateStorage(file, roomId, user.uid);
-  console.log('✅ Kuva ladattu Storageen (yksityinen):', imageData);
+    // 1. Lataa kuva ImgBB:hen (24h auto-poisto)
+    setUploadProgress('Ladataan kuvaa palvelimelle...');
+    const imageData = await uploadImageToImgBB(file);
+    console.log('✅ Kuva ladattu ImgBB:hen:', imageData);
 
       // 2. Moderoi kuva OpenAI:lla
       setUploadProgress('Tarkistetaan kuvan sisältöä...');
-  const moderationResult = await moderateImage(imageData.url);
+    const moderationResult = await moderateImage(imageData.url);
       
       if (moderationResult.flagged) {
         // Sopimaton kuva → välitön 24h banni (tai ikuinen jos 3. banni)
@@ -553,7 +587,8 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       await addDoc(collection(db, `rooms/${roomId}/messages`), {
         text: '', // Tyhjä teksti kuvaviestille
         imageUrl: imageData.url,
-        imagePath: imageData.path, // viite Storage-objektiin mahdollisia poistoja varten
+        imageDeleteUrl: imageData.deleteUrl,
+        imageExpiration: imageData.expiration,
         type: 'image',
         senderId: user.uid,
         senderName: profile?.nickname || user.displayName || 'Tuntematon',
@@ -577,7 +612,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         fileInputRef.current.value = '';
       }
     }
-  }, [roomReady, roomId, user, profile, uploadImageToPrivateStorage, moderateImage, scrollToBottom, userBanStatus]);
+  }, [roomReady, roomId, user, profile, uploadImageToImgBB, moderateImage, scrollToBottom, userBanStatus]);
 
   const sendMessage = useCallback(async (e) => {
     e.preventDefault();
@@ -999,7 +1034,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         if (msgsSnap.docs.length > 0) {
           console.log(`🗑️ Poistetaan ${msgsSnap.docs.length} viestiä ja niihin liittyvät kuvat (jos on)...`);
           
-          // Poista ensin mahdolliset Storage-kuvat
+          // Poista ensin mahdolliset Storage-kuvat ja vanhat ImgBB-kuvat
           for (const msgDoc of msgsSnap.docs) {
             const data = msgDoc.data();
             if (data?.imagePath) {
@@ -1008,7 +1043,21 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
                 await deleteObject(fileRef);
                 console.log(`🗑️ Poistettu Storage-kuva: ${data.imagePath}`);
               } catch (fileErr) {
-                console.warn(`⚠️ Kuvan poisto epäonnistui (${data.imagePath}):`, fileErr?.message || fileErr);
+                // Jos bucket puuttuu, ohitetaan siivous hiljaisesti
+                if ((fileErr?.code || '').includes('no-default-bucket')) {
+                  console.warn('ℹ️ Storage bucket puuttuu, ohitetaan Storage-kuvien poisto.');
+                } else {
+                  console.warn(`⚠️ Kuvan poisto epäonnistui (${data.imagePath}):`, fileErr?.message || fileErr);
+                }
+              }
+            }
+            // Poista myös vanhat ImgBB-kuvat jos deleteUrl tallessa
+            if (data?.imageDeleteUrl) {
+              try {
+                await fetch(data.imageDeleteUrl, { method: 'GET', mode: 'no-cors' });
+                console.log('🗑️ Pyyntö lähetetty ImgBB-kuvan poistoon');
+              } catch (imgbbErr) {
+                console.warn('⚠️ ImgBB-kuvan poisto epäonnistui:', imgbbErr?.message || imgbbErr);
               }
             }
           }
