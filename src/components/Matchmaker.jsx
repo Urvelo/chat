@@ -57,9 +57,9 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
     const aggressiveCleanup = async () => {
       try {
         const now = Date.now();
-        const TWO_MINUTES_AGO = now - (2 * 60 * 1000); // 2 minuuttia
+        const FIVE_MINUTES_AGO = now - (5 * 60 * 1000); // Muutettu 2min -> 5min (vähemmän aggressiivinen)
         
-        // 1. Siivoa vanhat waiting-käyttäjät (yli 2 min odottaneet)
+        // 1. Siivoa vanhat waiting-käyttäjät (yli 5 min odottaneet)
         const waitingSnapshot = await getDocs(collection(db, 'waiting'));
         const staleWaitingUsers = [];
         
@@ -67,7 +67,7 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
           const data = waitingDoc.data();
           const userAge = now - (data.timestamp || 0);
           
-          if (userAge > TWO_MINUTES_AGO) {
+          if (userAge > FIVE_MINUTES_AGO) {
             console.log("🗑️ Poistetaan vanha waiting-käyttäjä:", waitingDoc.id, "ikä:", Math.round(userAge / 1000), "s");
             staleWaitingUsers.push(deleteDoc(doc(db, 'waiting', waitingDoc.id)));
           }
@@ -78,7 +78,7 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
           console.log(`✅ Siivottiin ${staleWaitingUsers.length} vanhaa waiting-käyttäjää`);
         }
         
-        // 2. Siivoa vanhat tai epäaktiiviset huoneet (yli 2 min tai isActive:false)
+        // 2. Siivoa vanhat tai epäaktiiviset huoneet (yli 5 min tai isActive:false)
         const roomsSnapshot = await getDocs(collection(db, 'rooms'));
         const staleRooms = [];
         
@@ -86,8 +86,8 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
           const data = roomDoc.data();
           const roomAge = now - (data.createdAt?.toDate?.()?.getTime() || 0);
           
-          // Poista yli 2 minuuttia vanhat tai epäaktiiviset huoneet
-          if (roomAge > TWO_MINUTES_AGO || data.isActive === false) {
+          // Poista yli 5 minuuttia vanhat tai epäaktiiviset huoneet
+          if (roomAge > FIVE_MINUTES_AGO || data.isActive === false) {
             console.log("🗑️ Poistetaan vanha/epäaktiivinen huone:", roomDoc.id, "ikä:", Math.round(roomAge / 1000), "s", "isActive:", data.isActive);
             staleRooms.push(deleteDoc(doc(db, 'rooms', roomDoc.id)));
           }
@@ -106,8 +106,8 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
     // Suorita siivous heti kun Matchmaker latautuu
     aggressiveCleanup();
     
-    // Sitten joka 15 sekunnin välein
-    const interval = setInterval(aggressiveCleanup, 15000);
+    // Sitten joka 30 sekunnin välein (vähemmän aggressiivinen)
+    const interval = setInterval(aggressiveCleanup, 30000);
     
     return () => clearInterval(interval);
   }, []);
@@ -297,11 +297,14 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
         [`users.${roomData.users.findIndex(u => u.uid === user.uid)}.ready`]: true
       });
       
-      // Poista molemmat käyttäjät waiting-listasta
+      // Poista molemmat käyttäjät waiting-listasta - lisää viive estämään race condition
       await Promise.all([
         deleteDoc(doc(db, 'waiting', user.uid)).catch(e => console.warn("Oman waiting-poisto epäonnistui:", e)),
         deleteDoc(doc(db, 'waiting', otherUser.id)).catch(e => console.warn("Toisen waiting-poisto epäonnistui:", e))
       ]);
+      
+      // Pieni viive ennen siirtymistä chatiin - antaa aikaa Firestorelle synkronoida
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       console.log("🎉 Siirtymä chat-huoneeseen");
       
@@ -335,8 +338,8 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
           const data = roomDoc.data();
           const roomAge = Date.now() - (data.createdAt?.toDate?.()?.getTime() || 0);
           
-          // Poista vanhat (yli 1 min) tai epäaktiiviset huoneet
-          if (roomAge > 60000 || data.isActive === false) {
+          // Poista vanhat (yli 3 min) tai epäaktiiviset huoneet - vähemmän aggressiivinen
+          if (roomAge > 180000 || data.isActive === false) {
             console.log("🧹 Siivotaan vanha huone käyttäjältä:", roomDoc.id);
             cleanupPromises.push(deleteDoc(doc(db, 'rooms', roomDoc.id)));
           }
@@ -451,26 +454,55 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
       const unsubscribe = onSnapshot(q, async (snapshot) => {
         console.log("onSnapshot triggered, löytyi dokumentteja:", snapshot.size);
         
-        if (!snapshot.empty) {
-          const waitingUsers = snapshot.docs
+        if (!snapshot.empty && isSearching) {
+          const allWaitingUsers = snapshot.docs
             .map(doc => ({
               id: doc.id,
               ...doc.data()
             }))
             .filter(waitingUser => waitingUser.uid !== user.uid); // Suodata oma uid pois
           
-          console.log("Waiting käyttäjät (ilman omaa):", waitingUsers);
+          console.log("Waiting käyttäjät (ilman omaa):", allWaitingUsers);
           
-          // ✅ KORJATTU: Tarkista että olemmeko edelleen etsimässä
-          if (waitingUsers.length > 0 && isSearching) {
-            // Ota ensimmäinen käyttäjä
-            const otherUser = waitingUsers[0];
-            console.log("Löytyi match:", otherUser);
+          if (allWaitingUsers.length > 0) {
+            // 🔄 PARANNETTU MATCHING: Ota satunnainen käyttäjä, ei aina ensimmäinen
+            const randomIndex = Math.floor(Math.random() * allWaitingUsers.length);
+            const otherUser = allWaitingUsers[randomIndex];
             
-            setStatus('Löytyi match! Luodaan chat...');
-            unsubscribe(); // Lopeta kuuntelu
+            console.log("Löytyi match (satunnainen valinta):", otherUser, "indeksi:", randomIndex, "/", allWaitingUsers.length);
             
-            await createChatRoom(otherUser);
+            // 🔒 TARKISTA VIELÄ KERRAN että meillä ei ole jo huonetta tämän käyttäjän kanssa
+            const doubleCheckQuery = query(
+              collection(db, 'rooms'),
+              where('userIds', 'array-contains', user.uid)
+            );
+            
+            try {
+              const doubleCheckSnapshot = await getDocs(doubleCheckQuery);
+              const hasActiveRoom = doubleCheckSnapshot.docs.some(roomDoc => {
+                const data = roomDoc.data();
+                const userIds = data.userIds || [];
+                return userIds.includes(otherUser.id) && data.isActive;
+              });
+              
+              if (hasActiveRoom) {
+                console.log("⚠️ Double-check: Huone on jo olemassa, ohitetaan match");
+                return;
+              }
+              
+              // ✅ Kaikki kunnossa, luodaan huone
+              setStatus('Löytyi match! Luodaan chat...');
+              unsubscribe(); // Lopeta kuuntelu
+              
+              await createChatRoom(otherUser);
+              
+            } catch (doubleCheckError) {
+              console.error("❌ Virhe double-check:ssä:", doubleCheckError);
+              // Jatka normaalisti jos tarkistus epäonnistuu
+              setStatus('Löytyi match! Luodaan chat...');
+              unsubscribe(); // Lopeta kuuntelu
+              await createChatRoom(otherUser);
+            }
           }
         }
       }, (error) => {
