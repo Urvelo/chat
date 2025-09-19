@@ -97,9 +97,9 @@ const Auth = ({ user, setUser }) => {
       return;
     }
 
-    // Siirry käyttöehtoihin
-    setStep('terms');
-    setLoading(false);
+  // Ei erillistä käyttöehtojen sivua anonyymeille: siirry suoraan luomaan käyttäjä
+  handleAcceptTerms();
+  setLoading(false);
   };
 
   const handleAcceptTerms = () => {
