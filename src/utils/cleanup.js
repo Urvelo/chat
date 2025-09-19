@@ -8,7 +8,7 @@ class CleanupService {
   }
 
   // Poista vanhat huoneet (yli 24h vanhat tai epäaktiiviset)
-  async cleanupStaleRooms(maxAgeHours = 24) {
+  async cleanupStaleRooms(maxAgeHours = 1) { // Muutettu 24h -> 1h
     try {
       console.log(`🧹 Aloitetaan vanhojen huoneiden siivous (yli ${maxAgeHours}h)`);
       
@@ -25,7 +25,7 @@ class CleanupService {
         
         // Tarkista ikä tai aktiivisuus
         const roomAge = now - (data.createdAt?.toDate?.()?.getTime() || 0);
-        const isStale = roomAge > cutoffTime || !data.isActive;
+        const isStale = roomAge > cutoffTime || data.isActive === false;
         
         if (isStale) {
           console.log(`🗑️ Poistetaan vanha huone: ${roomId} (ikä: ${Math.round(roomAge / 1000 / 60)} min)`);
@@ -65,7 +65,7 @@ class CleanupService {
   }
 
   // Poista vanhat waiting-käyttäjät (yli 1h odottaneet)
-  async cleanupStaleWaitingUsers(maxAgeHours = 1) {
+  async cleanupStaleWaitingUsers(maxAgeHours = 0.1) { // Muutettu 1h -> 6min (0.1h)
     try {
       console.log(`🧹 Siivotaan vanhoja waiting-käyttäjiä (yli ${maxAgeHours}h)`);
       
@@ -143,8 +143,8 @@ class CleanupService {
     console.log('🧹 Aloitetaan täydellinen siivous...');
     
     const results = {
-      staleRooms: await this.cleanupStaleRooms(24),
-      staleWaiting: await this.cleanupStaleWaitingUsers(1),
+      staleRooms: await this.cleanupStaleRooms(1), // 1h sen sijaan että 24h
+      staleWaiting: await this.cleanupStaleWaitingUsers(0.1), // 6min sen sijaan että 1h
       minimizedProfiles: await this.minimizeProfiles(),
       timestamp: new Date()
     };

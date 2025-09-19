@@ -52,42 +52,62 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
     return unsubscribeWaiting;
   }, []);
 
-    // Siivoa vanhat huoneet automaattisesti
+    // Aggressiivisempi siivous vanhoille käyttäjille ja huoneille
   useEffect(() => {
-    const cleanupOldRooms = async () => {
+    const aggressiveCleanup = async () => {
       try {
         const now = Date.now();
-        const fiveMinutesAgo = now - (5 * 60 * 1000);
+        const TWO_MINUTES_AGO = now - (2 * 60 * 1000); // 2 minuuttia
         
-        // Hae vanhat huoneet
-        const roomsQuery = query(collection(db, 'rooms'));
-        const snapshot = await getDocs(roomsQuery);
+        // 1. Siivoa vanhat waiting-käyttäjät (yli 2 min odottaneet)
+        const waitingSnapshot = await getDocs(collection(db, 'waiting'));
+        const staleWaitingUsers = [];
         
-        const deletePromises = [];
-        
-        snapshot.docs.forEach(roomDoc => {
-          const data = roomDoc.data();
-          const roomAge = now - (data.createdAt?.toDate?.()?.getTime() || 0);
+        waitingSnapshot.docs.forEach(waitingDoc => {
+          const data = waitingDoc.data();
+          const userAge = now - (data.timestamp || 0);
           
-          // Poista yli 5 minuuttia vanhat tai epäaktiiviset huoneet
-          if (roomAge > fiveMinutesAgo || !data.isActive) {
-            console.log("🗑️ Poistetaan vanha huone:", roomDoc.id);
-            deletePromises.push(deleteDoc(doc(db, 'rooms', roomDoc.id)));
+          if (userAge > TWO_MINUTES_AGO) {
+            console.log("🗑️ Poistetaan vanha waiting-käyttäjä:", waitingDoc.id, "ikä:", Math.round(userAge / 1000), "s");
+            staleWaitingUsers.push(deleteDoc(doc(db, 'waiting', waitingDoc.id)));
           }
         });
         
-        if (deletePromises.length > 0) {
-          await Promise.all(deletePromises);
-          console.log(`✅ Siivottiin ${deletePromises.length} vanhaa huonetta`);
+        if (staleWaitingUsers.length > 0) {
+          await Promise.all(staleWaitingUsers);
+          console.log(`✅ Siivottiin ${staleWaitingUsers.length} vanhaa waiting-käyttäjää`);
         }
+        
+        // 2. Siivoa vanhat tai epäaktiiviset huoneet (yli 2 min tai isActive:false)
+        const roomsSnapshot = await getDocs(collection(db, 'rooms'));
+        const staleRooms = [];
+        
+        roomsSnapshot.docs.forEach(roomDoc => {
+          const data = roomDoc.data();
+          const roomAge = now - (data.createdAt?.toDate?.()?.getTime() || 0);
+          
+          // Poista yli 2 minuuttia vanhat tai epäaktiiviset huoneet
+          if (roomAge > TWO_MINUTES_AGO || data.isActive === false) {
+            console.log("🗑️ Poistetaan vanha/epäaktiivinen huone:", roomDoc.id, "ikä:", Math.round(roomAge / 1000), "s", "isActive:", data.isActive);
+            staleRooms.push(deleteDoc(doc(db, 'rooms', roomDoc.id)));
+          }
+        });
+        
+        if (staleRooms.length > 0) {
+          await Promise.all(staleRooms);
+          console.log(`✅ Siivottiin ${staleRooms.length} vanhaa huonetta`);
+        }
+        
       } catch (error) {
-        console.error("❌ Virhe huoneiden siivouksessa:", error);
+        console.error("❌ Virhe aggressiivisessa siivouksessa:", error);
       }
     };
 
-    // Suorita siivous heti ja sitten 30 sekunnin välein
-    cleanupOldRooms();
-    const interval = setInterval(cleanupOldRooms, 30000);
+    // Suorita siivous heti kun Matchmaker latautuu
+    aggressiveCleanup();
+    
+    // Sitten joka 15 sekunnin välein
+    const interval = setInterval(aggressiveCleanup, 15000);
     
     return () => clearInterval(interval);
   }, []);
@@ -212,6 +232,26 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
         return;
       }
       
+      // 🔒 ESTÄ TUPLIEN LUONTI: Tarkista onko jo olemassa huone näiden käyttäjien välillä
+      const existingRoomsQuery = query(
+        collection(db, 'rooms'),
+        where('userIds', 'array-contains', user.uid)
+      );
+      const existingSnapshot = await getDocs(existingRoomsQuery);
+      
+      const hasExistingRoom = existingSnapshot.docs.some(roomDoc => {
+        const data = roomDoc.data();
+        const userIds = data.userIds || [];
+        return userIds.includes(otherUser.id) && data.isActive;
+      });
+      
+      if (hasExistingRoom) {
+        console.log("⚠️ Huone näiden käyttäjien välillä on jo olemassa, ei luoda uutta");
+        setStatus('idle');
+        setIsSearching(false);
+        return;
+      }
+      
       setStatus('matched');
       
       // Luo uniikki huone-ID
@@ -258,8 +298,10 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
       });
       
       // Poista molemmat käyttäjät waiting-listasta
-      await deleteDoc(doc(db, 'waiting', user.uid));
-      await deleteDoc(doc(db, 'waiting', otherUser.id));
+      await Promise.all([
+        deleteDoc(doc(db, 'waiting', user.uid)).catch(e => console.warn("Oman waiting-poisto epäonnistui:", e)),
+        deleteDoc(doc(db, 'waiting', otherUser.id)).catch(e => console.warn("Toisen waiting-poisto epäonnistui:", e))
+      ]);
       
       console.log("🎉 Siirtymä chat-huoneeseen");
       
@@ -276,6 +318,38 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
   // Aloita käyttäjien etsintä
   const startSearching = async () => {
     try {
+      // 🧹 SIIVOA ENSIN: Poista kaikki vanhat jäänteet tältä käyttäjältä
+      try {
+        // Poista mahdollinen vanha waiting-merkintä
+        await deleteDoc(doc(db, 'waiting', user.uid)).catch(e => console.log("Ei vanhaa waiting-merkintää"));
+        
+        // Etsi ja poista kaikki vanhat epäaktiiviset huoneet joissa tämä käyttäjä on mukana
+        const oldRoomsQuery = query(
+          collection(db, 'rooms'),
+          where('userIds', 'array-contains', user.uid)
+        );
+        const oldRoomsSnapshot = await getDocs(oldRoomsQuery);
+        
+        const cleanupPromises = [];
+        oldRoomsSnapshot.docs.forEach(roomDoc => {
+          const data = roomDoc.data();
+          const roomAge = Date.now() - (data.createdAt?.toDate?.()?.getTime() || 0);
+          
+          // Poista vanhat (yli 1 min) tai epäaktiiviset huoneet
+          if (roomAge > 60000 || data.isActive === false) {
+            console.log("🧹 Siivotaan vanha huone käyttäjältä:", roomDoc.id);
+            cleanupPromises.push(deleteDoc(doc(db, 'rooms', roomDoc.id)));
+          }
+        });
+        
+        if (cleanupPromises.length > 0) {
+          await Promise.all(cleanupPromises);
+          console.log(`🧹 Siivottiin ${cleanupPromises.length} vanhaa huonetta käyttäjältä`);
+        }
+      } catch (cleanupError) {
+        console.warn("⚠️ Siivous epäonnistui osittain:", cleanupError);
+      }
+      
       // Tarkista onko käyttäjä bannattu tai temp-bannattu
       const profileRef = doc(db, 'profiles', user.uid);
       const profileSnap = await getDoc(profileRef);

@@ -134,23 +134,23 @@ function App() {
       }
     }
     
-    // Suorita siivous sovelluksen käynnistyessä (kerran päivässä)
+    // Suorita siivous sovelluksen käynnistyessä (kerran tunnissa)
     const lastCleanup = localStorage.getItem('lastCleanup');
     const now = Date.now();
-    const oneDayMs = 24 * 60 * 60 * 1000;
+    const oneHourMs = 60 * 60 * 1000; // Muutettu päivästä tuntiin
     
-    if (!lastCleanup || (now - parseInt(lastCleanup)) > oneDayMs) {
-      console.log('🧹 Suoritetaan päivittäinen siivous...');
+    if (!lastCleanup || (now - parseInt(lastCleanup)) > oneHourMs) {
+      console.log('🧹 Suoritetaan tuntikohtainen siivous...');
       cleanupService.performFullCleanup()
         .then(results => {
-          console.log('✅ Päivittäinen siivous valmis:', results);
+          console.log('✅ Tuntikohtainen siivous valmis:', results);
           localStorage.setItem('lastCleanup', now.toString());
         })
         .catch(error => {
-          console.error('❌ Päivittäinen siivous epäonnistui:', error);
+          console.error('❌ Tuntikohtainen siivous epäonnistui:', error);
         });
     } else {
-      console.log('ℹ️ Siivous tehty jo tänään, ohitetaan');
+      console.log('ℹ️ Siivous tehty jo tällä tunnilla, ohitetaan');
     }
     
     // Aina näytetään tervetuloa-sivu - ei tallenneta tietoja
