@@ -13,9 +13,35 @@ import {
   serverTimestamp 
 } from '../firebase';
 
+// Bannien herkkyysasetukset (säädettävät .env:n kautta)
+const getBanSettings = () => {
+  const sensitivity = import.meta?.env?.VITE_BAN_SENSITIVITY || 'normal';
+  
+  switch (sensitivity) {
+    case 'strict':
+      return {
+        textViolationsForBan: 3,     // 3 tekstirikkomusta → banni
+        tempBanDuration: 48,         // 48h temp-banni
+        permBanAfter: 2              // 2. banni = ikuinen
+      };
+    case 'relaxed':
+      return {
+        textViolationsForBan: 10,    // 10 tekstirikkomusta → banni
+        tempBanDuration: 12,         // 12h temp-banni
+        permBanAfter: 5              // 5. banni = ikuinen
+      };
+    default: // 'normal'
+      return {
+        textViolationsForBan: 5,     // 5 tekstirikkomusta → banni
+        tempBanDuration: 24,         // 24h temp-banni
+        permBanAfter: 3              // 3. banni = ikuinen
+      };
+  }
+};
+
 // Bannin kestot (millisekunteina)
 const BAN_DURATION = {
-  TEMPORARY: 24 * 60 * 60 * 1000, // 24 tuntia
+  TEMPORARY: 24 * 60 * 60 * 1000, // 24 tuntia (päivitetään dynaamisesti)
   PERMANENT: null // Ikuinen
 };
 
@@ -123,6 +149,7 @@ export const isUserBanned = async (userId) => {
 // Bannaa käyttäjä
 export const banUser = async (userId, reason, permanent = false) => {
   try {
+    const banSettings = getBanSettings();
     const userDocRef = doc(db, 'users', userId);
     const userDoc = await getDoc(userDocRef);
 
@@ -140,16 +167,17 @@ export const banUser = async (userId, reason, permanent = false) => {
 
     banData.banCount = banCount;
 
-    // Jos 3. banni tai pyydetty ikuinen banni
-    if (banCount >= 3 || permanent) {
+    // Jos ylitetään ikuisen bannin kynnys tai pyydetty ikuinen banni
+    if (banCount >= banSettings.permBanAfter || permanent) {
       banData.bannedUntil = 'permanent';
       banData.banReason = `Ikuinen banni (${banCount}. rikkomus)`;
-      console.log(`🚫 IKUINEN BANNI: Käyttäjä ${userId} (${banCount}. rikkomus)`);
+      console.log(`🚫 IKUINEN BANNI: Käyttäjä ${userId} (${banCount}. rikkomus, kynnys: ${banSettings.permBanAfter})`);
     } else {
-      // 24h määräaikainen banni
-      const banEndTime = new Date(Date.now() + BAN_DURATION.TEMPORARY);
+      // Määräaikainen banni (säädettävä kesto)
+      const banDuration = banSettings.tempBanDuration * 60 * 60 * 1000; // tunteja millisekunteihin
+      const banEndTime = new Date(Date.now() + banDuration);
       banData.bannedUntil = banEndTime;
-      console.log(`⏰ 24H BANNI: Käyttäjä ${userId} (${banCount}. rikkomus), päättyy ${banEndTime.toLocaleString()}`);
+      console.log(`⏰ ${banSettings.tempBanDuration}H BANNI: Käyttäjä ${userId} (${banCount}. rikkomus), päättyy ${banEndTime.toLocaleString()}`);
     }
 
     // Päivitä käyttäjän tiedot
@@ -197,20 +225,23 @@ export const handleInappropriateContent = async (userId, type, roomId, details =
       return { banned: true, banResult };
 
     } else if (type === BAN_REASONS.INAPPROPRIATE_TEXT) {
-      // Teksti: tarkista onko 5. rikkomus 24h sisällä
+      // Teksti: tarkista säädettävä kynnys
+      const banSettings = getBanSettings();
       const violationCount = await getRecentTextViolations(userId);
       
-      if (violationCount >= 5) {
-        // 5. rikkomus → 24h banni
-        const banResult = await banUser(userId, '5 sopimatonta viestiä 24h sisällä', false);
+      console.log(`📊 Tekstirikkeet: ${violationCount}/${banSettings.textViolationsForBan} (herkkyys: ${import.meta?.env?.VITE_BAN_SENSITIVITY || 'normal'})`);
+      
+      if (violationCount >= banSettings.textViolationsForBan) {
+        // Kynnys ylitetty → banni
+        const banResult = await banUser(userId, `${banSettings.textViolationsForBan} sopimatonta viestiä 24h sisällä`, false);
         
         // Lähetä viesti chatiin
         await sendModerationMessage(roomId, 'text_ban', banResult);
         
         return { banned: true, banResult };
       } else {
-        // Alle 5 rikkomusta → vain varoitus chatissa
-        await sendModerationMessage(roomId, 'text_warning', { violationCount });
+        // Alle kynnyksen → vain varoitus chatissa
+        await sendModerationMessage(roomId, 'text_warning', { violationCount, threshold: banSettings.textViolationsForBan });
         
         return { banned: false, violationCount };
       }

@@ -467,17 +467,40 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       console.log('🔍 Kaikki kategoriat:', categories);
       console.log('🔍 Kaikki scoret:', scores);
 
-      // Säännöt (lievemmät):
-      // - Minors: nollatoleranssi
-      // - Sexual: salli lievä (esim. uima-asu) → nosta kynnystä
-      // - Violence/harassment: korkeat kynnykset kuvissa
-      const THRESHOLDS = {
-        'sexual/minors': 0.00001, // zero-tolerance
-        sexual: 0.4,              // aiemmin 0.0001 → sallivampi
-        violence: 0.8,            // aiemmin 0.6 → sallivampi
-        'violence/graphic': 0.6,
-        harassment: 0.9
-      };
+      // Säännöt (säädettävät .env:n kautta)
+      const moderationLevel = import.meta.env.VITE_MODERATION_LEVEL || 'normal';
+      
+      let THRESHOLDS;
+      switch (moderationLevel) {
+        case 'strict':
+          THRESHOLDS = {
+            'sexual/minors': 0.00001,
+            sexual: 0.1,              // Tiukka
+            violence: 0.3,            // Tiukka
+            'violence/graphic': 0.2,  // Tiukka
+            harassment: 0.4           // Tiukka
+          };
+          break;
+        case 'relaxed':
+          THRESHOLDS = {
+            'sexual/minors': 0.00001, // Aina nollatoleranssi
+            sexual: 0.7,              // Salliva
+            violence: 0.9,            // Salliva
+            'violence/graphic': 0.8,  // Salliva
+            harassment: 0.95          // Salliva
+          };
+          break;
+        default: // 'normal'
+          THRESHOLDS = {
+            'sexual/minors': 0.00001,
+            sexual: 0.4,              // Kohtuullinen
+            violence: 0.8,            // Kohtuullinen
+            'violence/graphic': 0.6,  // Kohtuullinen
+            harassment: 0.9           // Kohtuullinen
+          };
+      }
+      
+      console.log(`🎛️ Moderation level: ${moderationLevel}`, THRESHOLDS);
 
       // 🧪 DEBUG MODE: Aseta ympäristömuuttuja VITE_DEBUG_MODERATION=true testaamista varten
       const isDebugMode = import.meta.env.VITE_DEBUG_MODERATION === 'true';
