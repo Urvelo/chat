@@ -88,7 +88,10 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
           roomId, 
           imageUploading,
           userBanned: userBanStatus?.banned,
-          imgbbKey: !!import.meta.env.VITE_IMGBB_API_KEY
+          imgbbKey: !!import.meta.env.VITE_IMGBB_API_KEY,
+          profileAge: profile?.age,
+          isOver18: profile?.age >= 18,
+          imageButtonDisabled: (!isReady || imageUploading || userBanStatus?.banned || !import.meta.env.VITE_IMGBB_API_KEY || !profile?.age || profile.age < 18)
         });
         setRoomReady(isReady);
         setWaitingForOther(false);
@@ -1545,17 +1548,19 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
             htmlFor="image-upload" 
             className={`chat-image-btn ${imageUploading ? 'image-uploading' : ''}`}
             style={{ 
-              pointerEvents: (!roomReady || imageUploading || userBanStatus?.banned || !import.meta.env.VITE_IMGBB_API_KEY) ? 'none' : 'auto',
-              opacity: (!roomReady || imageUploading || userBanStatus?.banned || !import.meta.env.VITE_IMGBB_API_KEY) ? 0.6 : 1 
+              pointerEvents: (!roomReady || imageUploading || userBanStatus?.banned || !import.meta.env.VITE_IMGBB_API_KEY || !profile?.age || profile.age < 18) ? 'none' : 'auto',
+              opacity: (!roomReady || imageUploading || userBanStatus?.banned || !import.meta.env.VITE_IMGBB_API_KEY || !profile?.age || profile.age < 18) ? 0.6 : 1 
             }}
             title={
               userBanStatus?.banned 
                 ? "Et voi lähettää kuvia (bannattu)"
                 : (!import.meta.env.VITE_IMGBB_API_KEY
                     ? "Kuvan lähetys pois käytöstä: ImgBB API-avain puuttuu"
-                    : (!roomReady 
-                        ? `Huone ei valmis (roomReady: ${roomReady})`
-                        : (imageUploading ? uploadProgress || "Lähettää kuvaa..." : "Lähetä kuva")))
+                    : ((!profile?.age || profile.age < 18)
+                        ? "Kuvan lähetys vain 18+ käyttäjille"
+                        : (!roomReady 
+                            ? `Huone ei valmis (roomReady: ${roomReady})`
+                            : (imageUploading ? uploadProgress || "Lähettää kuvaa..." : "Lähetä kuva"))))
             }
           >
             {imageUploading ? (
