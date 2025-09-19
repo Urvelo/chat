@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { signInWithGoogle } from '../supabase';
 import './Auth.css';
+import AuthButtons from './AuthButtons';
 
 const Auth = ({ user, setUser }) => {
   const [name, setName] = useState('');
@@ -268,36 +269,7 @@ const Auth = ({ user, setUser }) => {
         
         {error && <div className="error-message">{error}</div>}
         
-        <div className="main-auth-options">
-          <button 
-            onClick={() => setStep('anonymous-form')}
-            className="main-auth-btn anonymous-main-btn"
-          >
-            <div className="btn-icon">👤</div>
-            <div className="btn-text">
-              <h3>Jatka anonyymisti</h3>
-              <p>Valitse nimimerkki ja ikä</p>
-            </div>
-          </button>
-          
-          <button 
-            onClick={handleGoogleSignIn}
-            className="main-auth-btn google-main-btn"
-            disabled={googleLoading}
-          >
-            <div className="btn-icon">
-              {googleLoading ? (
-                <span className="loading-spinner-small">⟳</span>
-              ) : (
-                <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" className="google-icon" />
-              )}
-            </div>
-            <div className="btn-text">
-              <h3>Kirjaudu Google-tilillä</h3>
-              <p>{googleLoading ? 'Kirjaudutaan...' : 'Nopea ja turvallinen'}</p>
-            </div>
-          </button>
-        </div>
+        <AuthButtons onGoogleClick={handleGoogleSignIn} onAnonymousClick={handleAnonymousClick} />
         
         <div className="disclaimer">
           <p>Turvallinen keskustelupalvelu 15+ vuotiaille</p>
