@@ -25,6 +25,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
   const backgroundMusicRef = useRef(null);
   const joinSoundRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const hasFastLeftRef = useRef(false);
 
   // Hae toisen käyttäjän tiedot - memoized ja turvallinen
   const otherUser = useMemo(() => {
@@ -42,6 +43,12 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     const unsubscribe = onSnapshot(doc(db, 'rooms', roomId), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
+        // Jos huone on merkitty epäaktiiviseksi, poistu heti
+        if (data.isActive === false) {
+          console.warn('⚠️ Huone merkitty päättyneeksi, poistutaan:', roomId);
+          onLeaveRoom();
+          return;
+        }
         
         // Varmista että data on validia
         if (!data) {
@@ -873,6 +880,73 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       }
     };
   }, [roomId, user?.uid]); // Poistettu updateTypingStatus
+
+  // Nopea, luotettavampi huoneen sulku (käytetään kun sivu piilotetaan/poistutaan)
+  const fastCloseRoom = useCallback(async (reason = 'auto') => {
+    if (!roomId || !user?.uid) return;
+    if (hasFastLeftRef.current) return; // Estä tuplasuoritukset
+    hasFastLeftRef.current = true;
+
+    try {
+      // Lähetä yksinkertainen järjestelmäviesti (parhaamme mukaan)
+      const leaveMsgId = 'leave_' + Date.now();
+      const leaveMessage = {
+        id: leaveMsgId,
+        senderId: 'system',
+        senderName: 'Järjestelmä',
+        text: `${user.displayName || 'Käyttäjä'} poistui chatista. Chat on päättynyt.`,
+        timestamp: serverTimestamp(),
+        type: 'system',
+      };
+      try {
+        await setDoc(doc(db, 'rooms', roomId, 'messages', leaveMessage.id), leaveMessage);
+      } catch (e) {
+        // Hiljainen epäonnistuminen (esim. unload)
+      }
+
+      // Merkitse huone epäaktiiviseksi – CleanupService poistaa myöhemmin
+      await updateDoc(doc(db, 'rooms', roomId), {
+        isActive: false,
+        leftAt: serverTimestamp(),
+        closedBy: user.uid,
+        closedReason: reason,
+        [`typingUsers.${user.uid}`]: false
+      });
+    } catch (e) {
+      // Hiljainen epäonnistuminen
+    } finally {
+      // Yritä poistua UI:sta joka tapauksessa
+      onLeaveRoom();
+    }
+  }, [roomId, user?.uid, user?.displayName, onLeaveRoom]);
+
+  // Sulje huone automaattisesti kun sivu piilotetaan/poistutaan
+  useEffect(() => {
+    if (!roomId || !user?.uid) return;
+
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        // Sulje nopeasti kun välilehti piilotetaan
+        fastCloseRoom('visibilitychange');
+      }
+    };
+
+    const onPageHide = () => fastCloseRoom('pagehide');
+    const onBeforeUnload = () => {
+      // beforeunloadissa teemme vain nopean sulun; ei alertteja
+      fastCloseRoom('beforeunload');
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('pagehide', onPageHide);
+    window.addEventListener('beforeunload', onBeforeUnload);
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('pagehide', onPageHide);
+      window.removeEventListener('beforeunload', onBeforeUnload);
+    };
+  }, [roomId, user?.uid, fastCloseRoom]);
 
   // Ilmoita käyttäjä (porrastettu bänni: 4 ilmoitusta = temp bänni, 3 temp bänniä = ikuinen)
   const reportUser = async () => {
