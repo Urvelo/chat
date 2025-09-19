@@ -26,6 +26,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
   const joinSoundRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const hasFastLeftRef = useRef(false);
+  const roomActiveRef = useRef(true);
 
   // Hae toisen käyttäjän tiedot - memoized ja turvallinen
   const otherUser = useMemo(() => {
@@ -46,6 +47,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         // Jos huone on merkitty epäaktiiviseksi, poistu heti
         if (data.isActive === false) {
           console.warn('⚠️ Huone merkitty päättyneeksi, poistutaan:', roomId);
+          roomActiveRef.current = false;
           onLeaveRoom();
           return;
         }
@@ -86,11 +88,13 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       } else {
         console.warn("⚠️ Huone ei enää ole olemassa:", roomId);
         // Huone on poistettu, palaa takaisin
+        roomActiveRef.current = false;
         onLeaveRoom();
       }
     }, (error) => {
       console.error("❌ Virhe huoneen kuuntelussa:", error);
       // Jos kuuntelu epäonnistuu, palaa takaisin
+      roomActiveRef.current = false;
       onLeaveRoom();
     });
 
@@ -320,7 +324,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     // Typing-indikaattorin logiikka - käytä funktionaalista päivitystä
     if (value.trim()) {
       setIsTyping(prev => {
-        if (!prev && roomId && user?.uid) {
+        if (!prev && roomId && user?.uid && roomActiveRef.current) {
           // Inline typing-päivitys välttääksemme dependency-ongelman
           const roomRef = doc(db, 'rooms', roomId);
           updateDoc(roomRef, {
@@ -341,7 +345,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     // Aseta uusi timeout joka lopettaa typing-statuksen
     typingTimeoutRef.current = setTimeout(() => {
       setIsTyping(false);
-      if (roomId && user?.uid) {
+      if (roomId && user?.uid && roomActiveRef.current) {
         const roomRef = doc(db, 'rooms', roomId);
         updateDoc(roomRef, {
           [`typingUsers.${user.uid}`]: false
@@ -870,7 +874,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         clearTimeout(typingTimeoutRef.current);
       }
       // Nollaa typing-status kun komponentti poistuu
-      if (roomId && user?.uid) {
+      if (roomId && user?.uid && roomActiveRef.current) {
         const roomRef = doc(db, 'rooms', roomId);
         updateDoc(roomRef, {
           [`typingUsers.${user.uid}`]: false
@@ -886,6 +890,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     if (!roomId || !user?.uid) return;
     if (hasFastLeftRef.current) return; // Estä tuplasuoritukset
     hasFastLeftRef.current = true;
+    roomActiveRef.current = false;
 
     try {
       // Lähetä yksinkertainen järjestelmäviesti (parhaamme mukaan)
@@ -1440,13 +1445,15 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
             htmlFor="image-upload" 
             className={`chat-image-btn ${imageUploading ? 'image-uploading' : ''}`}
             style={{ 
-              pointerEvents: !roomReady || imageUploading || userBanStatus?.banned ? 'none' : 'auto',
-              opacity: !roomReady || imageUploading || userBanStatus?.banned ? 0.6 : 1 
+              pointerEvents: (!roomReady || imageUploading || userBanStatus?.banned || !import.meta.env.VITE_IMGBB_API_KEY) ? 'none' : 'auto',
+              opacity: (!roomReady || imageUploading || userBanStatus?.banned || !import.meta.env.VITE_IMGBB_API_KEY) ? 0.6 : 1 
             }}
             title={
               userBanStatus?.banned 
                 ? "Et voi lähettää kuvia (bannattu)"
-                : (imageUploading ? uploadProgress || "Lähettää kuvaa..." : "Lähetä kuva")
+                : (!import.meta.env.VITE_IMGBB_API_KEY
+                    ? "Kuvan lähetys pois käytöstä: ImgBB API-avain puuttuu"
+                    : (imageUploading ? uploadProgress || "Lähettää kuvaa..." : "Lähetä kuva"))
             }
           >
             {imageUploading ? (

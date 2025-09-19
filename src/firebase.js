@@ -62,4 +62,4 @@ export {
 };
 
 console.log('🔥 Oikea Firebase käytössä - laitteet yhdistyvät!');
-console.log('🗂️ Firebase Storage käytössä yksityisiä kuvia varten.');
+console.log('🗂️ Firebase Storage alustettu (valinnainen yksityisille kuville, vaatii storageBucket-konfiguraation).');
