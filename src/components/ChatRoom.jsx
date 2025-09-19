@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, getDoc, deleteDoc, setDoc, getDocs, writeBatch } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, storage, ref, uploadBytes, getDownloadURL, deleteObject } from '../firebase';
 import { smartModerationService } from '../utils/smart-moderation.js';
 import { handleInappropriateContent, isUserBanned, BAN_REASONS } from '../utils/ban-system.js';
 // Firebase Functions moderointi poistettu - käytetään vain offline-moderointia
@@ -345,41 +345,22 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     }, 1000); // 1 sekunnin kuluttua lopettaa typing
   }, [roomId, user?.uid]); // Yksinkertaisemmat riippuvuudet
 
-  // ImgBB kuvan upload - turvallinen versio 24h expiration
-  const uploadImageToImgBB = useCallback(async (file) => {
-    const formData = new FormData();
-    formData.append('image', file);
+  // Yksityinen kuva-upload Firebase Storageen
+  const uploadImageToPrivateStorage = useCallback(async (file, roomId, userId) => {
+    // Luo yksilöllinen polku private-kansioon
+    const ext = file.name.split('.').pop() || 'jpg';
+    const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    const objectPath = `private/${roomId}/${userId}/${fileName}`;
+    const storageRef = ref(storage, objectPath);
+
+    // Lataa raakabittinä (contentType säilyy)
+    await uploadBytes(storageRef, file, { contentType: file.type });
     
-    const API_KEY = 'b758ed1b7d747547e4ae4572aca54f79'; // Antamasi API-avain
-    const EXPIRATION_24H = 24 * 60 * 60; // 24 tuntia sekunteina
-    
-    try {
-      // Käytä expiration-parametria automaattista poistoa varten
-      const response = await fetch(`https://api.imgbb.com/1/upload?key=${API_KEY}&expiration=${EXPIRATION_24H}`, {
-        method: 'POST',
-        body: formData
-      });
-      
-      if (!response.ok) {
-        throw new Error(`ImgBB API virhe: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        console.log('✅ Kuva ladattu ImgBB:hen (poistuu 24h kuluttua):', data.data.url);
-        return {
-          url: data.data.display_url, // Käytä display_url parempaan laatuun
-          deleteUrl: data.data.delete_url, // Tallenna delete URL myöhempää poistoa varten
-          expiration: data.data.expiration
-        };
-      } else {
-        throw new Error('ImgBB upload epäonnistui');
-      }
-    } catch (error) {
-      console.error('ImgBB upload virhe:', error);
-      throw error;
-    }
+    // Luo allekirjoitettu lataus-URL (getDownloadURL kun säännöt sallii)
+    // Huom: getDownloadURL toimii mikäli storage-säännöt sallivat authenticated-read
+    const url = await getDownloadURL(storageRef);
+
+    return { url, path: objectPath };
   }, []);
 
   // OpenAI kuvan moderointi - OIKEA ilmainen moderation API
@@ -551,14 +532,14 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     setUploadProgress('Tarkistetaan tiedostoa...');
 
     try {
-      // 1. Lataa kuva ImgBB:hen (24h expiration)
-      setUploadProgress('Ladataan kuvaa palvelimelle...');
-      const imageData = await uploadImageToImgBB(file);
-      console.log('✅ Kuva ladattu ImgBB:hen (poistuu automaattisesti 24h):', imageData);
+  // 1. Lataa kuva yksityiseen Storage-kansioon
+  setUploadProgress('Ladataan kuvaa yksityiseen kansioon...');
+  const imageData = await uploadImageToPrivateStorage(file, roomId, user.uid);
+  console.log('✅ Kuva ladattu Storageen (yksityinen):', imageData);
 
       // 2. Moderoi kuva OpenAI:lla
       setUploadProgress('Tarkistetaan kuvan sisältöä...');
-      const moderationResult = await moderateImage(imageData.url);
+  const moderationResult = await moderateImage(imageData.url);
       
       if (moderationResult.flagged) {
         // Sopimaton kuva → välitön 24h banni (tai ikuinen jos 3. banni)
@@ -580,9 +561,8 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       setUploadProgress('Lähetetään kuvaa chatiin...');
       await addDoc(collection(db, `rooms/${roomId}/messages`), {
         text: '', // Tyhjä teksti kuvaviestille
-        imageUrl: imageData.url, // Käytä display_url parempaan laatuun
-        imageDeleteUrl: imageData.deleteUrl, // Tallenna delete URL varmuuden vuoksi
-        imageExpiration: imageData.expiration, // Tallenna expiration-tiedot
+        imageUrl: imageData.url,
+        imagePath: imageData.path, // viite Storage-objektiin mahdollisia poistoja varten
         type: 'image',
         senderId: user.uid,
         senderName: profile?.nickname || user.displayName || 'Tuntematon',
@@ -606,7 +586,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         fileInputRef.current.value = '';
       }
     }
-  }, [roomReady, roomId, user, profile, uploadImageToImgBB, moderateImage, scrollToBottom, userBanStatus]);
+  }, [roomReady, roomId, user, profile, uploadImageToPrivateStorage, moderateImage, scrollToBottom, userBanStatus]);
 
   const sendMessage = useCallback(async (e) => {
     e.preventDefault();
@@ -1021,12 +1001,26 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         }
       }
       
-      // Poista kaikki viestit ennen huoneen poistamista - NOPEA BATCH-VERSIO
+      // Poista kaikki viestit ja niihin liittyvät kuvat ennen huoneen poistamista - NOPEA BATCH-VERSIO
       try {
         const msgsSnap = await getDocs(collection(db, 'rooms', roomId, 'messages'));
         
         if (msgsSnap.docs.length > 0) {
-          console.log(`🗑️ Poistetaan ${msgsSnap.docs.length} viestiä batch-operaatiolla...`);
+          console.log(`🗑️ Poistetaan ${msgsSnap.docs.length} viestiä ja niihin liittyvät kuvat (jos on)...`);
+          
+          // Poista ensin mahdolliset Storage-kuvat
+          for (const msgDoc of msgsSnap.docs) {
+            const data = msgDoc.data();
+            if (data?.imagePath) {
+              try {
+                const fileRef = ref(storage, data.imagePath);
+                await deleteObject(fileRef);
+                console.log(`🗑️ Poistettu Storage-kuva: ${data.imagePath}`);
+              } catch (fileErr) {
+                console.warn(`⚠️ Kuvan poisto epäonnistui (${data.imagePath}):`, fileErr?.message || fileErr);
+              }
+            }
+          }
           
           // Firestore batch voi poistaa max 500 dokumenttia kerralla
           const batchSize = 500;

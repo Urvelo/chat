@@ -1,5 +1,6 @@
 // Firebase Configuration - Chat nuorille (Oikea Firebase cross-device)
 import { initializeApp } from 'firebase/app';
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { 
   getFirestore, 
   doc, 
@@ -32,6 +33,9 @@ const app = initializeApp(firebaseConfig);
 // Initialize Cloud Firestore and get a reference to the service
 export const db = getFirestore(app);
 
+// Initialize Firebase Storage for private image uploads
+export const storage = getStorage(app);
+
 // Export Firestore functions
 export {
   doc,
@@ -49,5 +53,13 @@ export {
   serverTimestamp
 };
 
+// Export Storage helpers
+export {
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject
+};
+
 console.log('🔥 Oikea Firebase käytössä - laitteet yhdistyvät!');
-console.log('� Pelkkä chat ilman Storage - ei kustannuksia!');
+console.log('🗂️ Firebase Storage käytössä yksityisiä kuvia varten.');

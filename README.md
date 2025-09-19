@@ -21,7 +21,7 @@ npm run dev
 - **Google OAuth** - Secure authentication
 - **Auto-moderation** - OpenAI + offline content filtering
 - **Smart bans** - Escalating punishment system
-- **Image sharing** - ImgBB with 24h auto-deletion
+- **Image sharing** - Private Firebase Storage folder (per-room), with moderation and cleanup on room deletion
 - **User safety tools** - Report system
 
 ## ✨ Features
