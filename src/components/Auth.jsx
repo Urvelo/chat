@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { signInWithGoogle } from '../supabase';
+import './Auth.css';
 
 const Auth = ({ user, setUser }) => {
   const [name, setName] = useState('');
