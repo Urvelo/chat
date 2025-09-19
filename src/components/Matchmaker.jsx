@@ -16,14 +16,9 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
   // Debug loggaus
   console.log("Matchmaker saanut props:", { user, profile });
 
-  // Kuuntele odottavia käyttäjiä samasta ikäryhmästä
+  // Kuuntele odottavia käyttäjiä (KAIKKI, ei vain sama ikäryhmä)
   useEffect(() => {
-    if (!profile?.ageGroup) return;
-
-    const q = query(
-      collection(db, 'waiting'),
-      where('ageGroup', '==', profile.ageGroup)
-    );
+    const q = query(collection(db, 'waiting'));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const users = snapshot.docs
@@ -41,7 +36,7 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
     });
 
     return unsubscribe;
-  }, [profile?.ageGroup, user.uid]);
+  }, [user.uid]); // Ei enää riippuvuutta ikäryhmästä
 
   // Kuuntele aktiivisten käyttäjien määrää
   useEffect(() => {
@@ -395,8 +390,7 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
         // Laske ikäryhmä käyttäjän iän perusteella
         const calculateAgeGroup = (age) => {
           if (age >= 15 && age <= 17) return '15-17';
-          if (age >= 18 && age <= 25) return '18-25';
-          return '25+';
+          return '18+'; // Kaikki 18+ samaan ryhmään
         };
         
         workingProfile.ageGroup = calculateAgeGroup(user.age);
@@ -425,9 +419,21 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
       setStatus('searching');
       setSearchStartTime(Date.now());
       
-      // Tarkista onko jo odottavia käyttäjiä
+      // Tarkista onko jo odottavia käyttäjiä (ikäpohjainen valinta)
       if (waitingUsers.length > 0) {
-        await createChatRoom(waitingUsers[0]);
+        // Sama logiikka kuin onSnapshotissa: sama ikäryhmä ensin, sitten nuorimmat
+        const sameAgeGroup = waitingUsers.filter(u => u.ageGroup === workingProfile.ageGroup);
+        let selectedUser;
+        
+        if (sameAgeGroup.length > 0) {
+          sameAgeGroup.sort((a, b) => (a.age || 18) - (b.age || 18));
+          selectedUser = sameAgeGroup[0];
+        } else {
+          waitingUsers.sort((a, b) => (a.age || 18) - (b.age || 18));
+          selectedUser = waitingUsers[0];
+        }
+        
+        await createChatRoom(selectedUser);
         return;
       }
       
@@ -438,16 +444,14 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
         uid: user.uid, // Pidä uid myös
         name: workingProfile.displayName,
         ageGroup: workingProfile.ageGroup,
+        age: user.age || profile.age, // Lisää ikä matchmaking varten
         timestamp: Date.now()
       });
 
       console.log("Lisätty waiting listaan:", user.uid, "nimi:", workingProfile.displayName, "ageGroup:", workingProfile.ageGroup);
       
-      // Kuuntele waiting-listaa ja etsi match (yksinkertainen query ilman indeksiä)
-      const q = query(
-        collection(db, 'waiting'),
-        where('ageGroup', '==', workingProfile.ageGroup)
-      );
+      // Kuuntele waiting-listaa ja etsi match (hae KAIKKI käyttäjät)
+      const q = query(collection(db, 'waiting'));
 
       console.log("Aloitetaan kuuntelu waiting listaa...");
       
@@ -465,11 +469,24 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
           console.log("Waiting käyttäjät (ilman omaa):", allWaitingUsers);
           
           if (allWaitingUsers.length > 0) {
-            // 🔄 PARANNETTU MATCHING: Ota satunnainen käyttäjä, ei aina ensimmäinen
-            const randomIndex = Math.floor(Math.random() * allWaitingUsers.length);
-            const otherUser = allWaitingUsers[randomIndex];
+            // 🎯 IKÄPOHJAINEN MATCHING: nuorimmat yhdistetään ensisijaisesti
+            let selectedUser;
             
-            console.log("Löytyi match (satunnainen valinta):", otherUser, "indeksi:", randomIndex, "/", allWaitingUsers.length);
+            // Ensisijainen: sama ikäryhmä, nuorimmat keskenään
+            const sameAgeGroup = allWaitingUsers.filter(u => u.ageGroup === workingProfile.ageGroup);
+            if (sameAgeGroup.length > 0) {
+              // Järjestä iän mukaan (nuorin ensin) ja valitse nuorin
+              sameAgeGroup.sort((a, b) => (a.age || 18) - (b.age || 18));
+              selectedUser = sameAgeGroup[0];
+              console.log("🎯 Valittu sama ikäryhmä, nuorin:", selectedUser.age, "vuotta");
+            } else {
+              // Fallback: eri ikäryhmä, mutta silti nuorin
+              allWaitingUsers.sort((a, b) => (a.age || 18) - (b.age || 18));
+              selectedUser = allWaitingUsers[0];
+              console.log("🔄 Fallback: eri ikäryhmä, nuorin:", selectedUser.age, "vuotta");
+            }
+            
+            console.log("Löytyi match (ikäpohjainen):", selectedUser);
             
             // 🔒 TARKISTA VIELÄ KERRAN että meillä ei ole jo huonetta tämän käyttäjän kanssa
             const doubleCheckQuery = query(
@@ -482,7 +499,7 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
               const hasActiveRoom = doubleCheckSnapshot.docs.some(roomDoc => {
                 const data = roomDoc.data();
                 const userIds = data.userIds || [];
-                return userIds.includes(otherUser.id) && data.isActive;
+                return userIds.includes(selectedUser.id) && data.isActive;
               });
               
               if (hasActiveRoom) {
@@ -494,14 +511,14 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
               setStatus('Löytyi match! Luodaan chat...');
               unsubscribe(); // Lopeta kuuntelu
               
-              await createChatRoom(otherUser);
+              await createChatRoom(selectedUser);
               
             } catch (doubleCheckError) {
               console.error("❌ Virhe double-check:ssä:", doubleCheckError);
               // Jatka normaalisti jos tarkistus epäonnistuu
               setStatus('Löytyi match! Luodaan chat...');
               unsubscribe(); // Lopeta kuuntelu
-              await createChatRoom(otherUser);
+              await createChatRoom(selectedUser);
             }
           }
         }

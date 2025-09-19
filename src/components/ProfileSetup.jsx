@@ -102,15 +102,14 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
       // Laske ikäryhmä käyttäjän iän perusteella
       const calculateAgeGroup = (age) => {
         if (age >= 15 && age <= 17) return '15-17';
-        if (age >= 18 && age <= 25) return '18-25';
-        return '25+';
+        return '18+'; // Kaikki 18+ samaan ryhmään
       };
       
       // Luo profiili
       const profileData = {
         displayName: user.displayName,
         age: parseInt(profile.age), // Käytä lomakkeesta syötettyä ikää
-        ageGroup: profile.age >= 18 ? '18+' : '15-17',
+        ageGroup: calculateAgeGroup(parseInt(profile.age)),
         backgroundMusic: profile.backgroundMusic,
         deviceFingerprint,
         createdAt: new Date().toISOString(),
