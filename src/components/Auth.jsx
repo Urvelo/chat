@@ -128,6 +128,8 @@ const Auth = ({ user, setUser }) => {
     setUser(null);
   };
 
+  const handleAnonymousClick = () => setStep('anonymous-form');
+
   if (user) {
     return (
       <div className="auth-container">
