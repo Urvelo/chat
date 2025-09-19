@@ -83,16 +83,15 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         
         // Yksinkertainen: jos huone on olemassa ja meillä on data, chat on valmis
         const isReady = true; // Aina valmis jos huone löytyy
-        console.log("🔄 ChatRoom ready status:", { 
-          roomReady: isReady, 
-          roomId, 
-          imageUploading,
-          userBanned: userBanStatus?.banned,
-          imgbbKey: !!import.meta.env.VITE_IMGBB_API_KEY,
-          profileAge: profile?.age,
-          isOver18: profile?.age >= 18,
-          imageButtonDisabled: (!isReady || imageUploading || userBanStatus?.banned || !import.meta.env.VITE_IMGBB_API_KEY || !profile?.age || profile.age < 18)
-        });
+        console.log("🔄 ChatRoom ready status:"); 
+        console.log("  - roomReady:", isReady);
+        console.log("  - roomId:", roomId);
+        console.log("  - imageUploading:", imageUploading);
+        console.log("  - userBanned:", userBanStatus?.banned);
+        console.log("  - imgbbKey:", !!import.meta.env.VITE_IMGBB_API_KEY);
+        console.log("  - profileAge:", profile?.age);
+        console.log("  - isOver18:", profile?.age >= 18);
+        console.log("  - imageButtonDisabled:", (!isReady || imageUploading || userBanStatus?.banned || !import.meta.env.VITE_IMGBB_API_KEY || !profile?.age || profile.age < 18));
         setRoomReady(isReady);
         setWaitingForOther(false);
       } else {
@@ -1547,6 +1546,22 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
           <label 
             htmlFor="image-upload" 
             className={`chat-image-btn ${imageUploading ? 'image-uploading' : ''}`}
+            onClick={() => {
+              console.log("🖱️ Image button clicked - checking conditions:");
+              console.log("  - roomReady:", roomReady);
+              console.log("  - imageUploading:", imageUploading);
+              console.log("  - userBanned:", userBanStatus?.banned);
+              console.log("  - imgbbKey:", !!import.meta.env.VITE_IMGBB_API_KEY);
+              console.log("  - profileAge:", profile?.age);
+              console.log("  - isOver18:", profile?.age >= 18);
+              const disabled = (!roomReady || imageUploading || userBanStatus?.banned || !import.meta.env.VITE_IMGBB_API_KEY || !profile?.age || profile.age < 18);
+              console.log("  - shouldBeDisabled:", disabled);
+              if (disabled) {
+                console.log("❌ Button should be disabled!");
+              } else {
+                console.log("✅ Button should work!");
+              }
+            }}
             style={{ 
               pointerEvents: (!roomReady || imageUploading || userBanStatus?.banned || !import.meta.env.VITE_IMGBB_API_KEY || !profile?.age || profile.age < 18) ? 'none' : 'auto',
               opacity: (!roomReady || imageUploading || userBanStatus?.banned || !import.meta.env.VITE_IMGBB_API_KEY || !profile?.age || profile.age < 18) ? 0.6 : 1 
