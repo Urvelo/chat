@@ -366,7 +366,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
   // OpenAI kuvan moderointi - OIKEA ilmainen moderation API
   const moderateImage = useCallback(async (imageUrl) => {
     try {
-      
+
       console.log('🖼️ Moderoidaan kuvaa OpenAI moderation API:lla:', imageUrl);
       
       // Tarkista että API-avain on asetettu
@@ -414,66 +414,56 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       }
       
       const result = data.results[0];
-      
-      if (result.flagged) {
-        // Kerää flaggatut kategoriat
-        const flaggedCategories = Object.keys(result.categories).filter(
-          category => result.categories[category]
-        );
-        
-        console.log('🚫 Kuva flaggattu kategorioissa:', flaggedCategories);
-        console.log('� Category scores:', result.category_scores);
-        
-        return {
-          flagged: true,
-          categories: flaggedCategories,
-          scores: result.category_scores
-        };
-      }
-      
-      // TARKEMPI DEBUG - näytetään kaikki kategoriat ja scoret
+
+      // Debug: tulosta kategoriat ja pisteet
+      const categories = result.categories || {};
+      const scores = result.category_scores || {};
       console.log('🔍 Moderation result flagged:', result.flagged);
-      console.log('🔍 Kaikki kategoriat:', result.categories);
-      console.log('🔍 Kaikki scoret:', result.category_scores);
-      
-      // TIUKENNETUT THRESHOLDIT - estä alastomia kuvia matalammilla arvoilla
-      const highRiskCategories = [];
-      if (result.category_scores) {
-        Object.keys(result.category_scores).forEach(category => {
-          const score = result.category_scores[category];
-          console.log(`📊 ${category}: ${score.toFixed(4)}`);
-          
-          // ERITTÄIN TIUKENNETTU threshold bikineille ja alastomuudelle
-          if ((category === 'sexual' && score > 0.0001) ||       // ÄÄRIMMÄISEN matala - estää bikinit
-              (category === 'sexual/minors' && score > 0.00001) || // Absoluuttinen nollatoleranssi
-              (category === 'violence' && score > 0.6) ||        
-              (category === 'violence/graphic' && score > 0.5) ||
-              (category === 'harassment' && score > 0.6)) {      
-            highRiskCategories.push(category);
-          }
-        });
-      }
-      
-      // Jos löytyy high-risk kategorioita TAI alkuperäinen flagged, estä kuva
-      if (result.flagged || highRiskCategories.length > 0) {
-        const flaggedCategories = result.flagged ? 
-          Object.keys(result.categories).filter(category => result.categories[category]) :
-          highRiskCategories;
-        
-        console.log('🚫🚫🚫 KUVA ESTETTY - SOPIMATON SISÄLTÖ!');
-        console.log('🚫 Estetty kategorioissa:', flaggedCategories);
-        console.log('📊 Tiukennetut thresholdit toimivat!');
-        console.log('📊 Category scores:', result.category_scores);
-        
+      console.log('🔍 Kaikki kategoriat:', categories);
+      console.log('🔍 Kaikki scoret:', scores);
+
+      // Säännöt (lievemmät):
+      // - Minors: nollatoleranssi
+      // - Sexual: salli lievä (esim. uima-asu) → nosta kynnystä
+      // - Violence/harassment: korkeat kynnykset kuvissa
+      const THRESHOLDS = {
+        'sexual/minors': 0.00001, // zero-tolerance
+        sexual: 0.4,              // aiemmin 0.0001 → sallivampi
+        violence: 0.8,            // aiemmin 0.6 → sallivampi
+        'violence/graphic': 0.6,
+        harassment: 0.9
+      };
+
+      // 1) Estä aina alaikäisiin liittyvä seksi
+      const minorsScore = scores['sexual/minors'] || 0;
+      if (categories['sexual/minors'] || minorsScore > THRESHOLDS['sexual/minors']) {
+        console.log('🚫 Estetty: sexual/minors (nollatoleranssi)');
         return {
           flagged: true,
-          categories: flaggedCategories,
-          scores: result.category_scores
+          categories: ['sexual/minors'],
+          scores
         };
       }
-      
-      console.log('✅ OpenAI: Kuva hyväksytty kaikissa kategorioissa');
-      return { flagged: false };
+
+      // 2) Arvioi muut kategoriat lievemmillä rajoilla
+      const blocked = [];
+      if ((scores['sexual'] || 0) > THRESHOLDS['sexual']) blocked.push('sexual');
+      if ((scores['violence'] || 0) > THRESHOLDS['violence']) blocked.push('violence');
+      if ((scores['violence/graphic'] || 0) > THRESHOLDS['violence/graphic']) blocked.push('violence/graphic');
+      if ((scores['harassment'] || 0) > THRESHOLDS['harassment']) blocked.push('harassment');
+
+      // 3) Jos OpenAI flaggaa mutta pisteet ovat selvästi alle rajojen, sallitaan (paitsi minors)
+      if (blocked.length === 0) {
+        console.log('✅ Kuva hyväksytty (rajat alitettu).');
+        return { flagged: false };
+      }
+
+      console.log('🚫 Kuva estetty lievennetyilläkin rajoilla:', blocked);
+      return {
+        flagged: true,
+        categories: blocked,
+        scores
+      };
       
     } catch (error) {
       console.error('❌ Kuvan moderointi epäonnistui:', error);
