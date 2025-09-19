@@ -22,6 +22,13 @@ const Welcome = ({ onContinue }) => {
           </div>
 
           <div className="welcome-section">
+            <h3>🖼️ Kuvakäytäntö lyhyesti</h3>
+            <p>- Vain 18+ Google-käyttäjät voivat lähettää kuvia.</p>
+            <p>- Kaikki kuvat moderoidaan automaattisesti: sopimaton sisältö estetään.</p>
+            <p>- Älä jaa kasvojasi tai henkilötietoja sisältäviä kuvia.</p>
+          </div>
+
+          <div className="welcome-section">
             <h3>💬 Palautetta tervetullut!</h3>
             <p>Haluamme kuulla palautetta chatista – se auttaa meitä pitämään palvelun turvallisena ja mukavana kaikille.</p>
           </div>

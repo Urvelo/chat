@@ -214,6 +214,17 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
                 <li>Vakavissa tapauksissa käyttö estetään välittömästi</li>
               </ul>
             </div>
+
+            <div className="welcome-section">
+              <h3>🖼️ Kuvakäytäntö:</h3>
+              <ul>
+                <li>Kuvien lähetys on sallittu vain 18+ Google-käyttäjille.</li>
+                <li>Kaikki kuvat moderoidaan automaattisesti (AI), sopimaton sisältö estetään.</li>
+                <li>Älä jaa kasvojasi tai henkilötietoja sisältäviä kuvia.</li>
+                <li>Ei paljastavaa, seksuaalista, väkivaltaista tai muuten sopimatonta sisältöä.</li>
+                <li>Rikkomuksista seuraa varoituksia tai tilin esto.</li>
+              </ul>
+            </div>
           </div>
 
           <div className="welcome-actions">
