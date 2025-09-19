@@ -310,9 +310,13 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
       
       console.log("✅ Huone luotu ID:llä:", actualRoomId);
       
-      // Merkitse itsemme valmiiksi huoneessa
+      // Merkitse itsemme valmiiksi huoneessa - päivitä koko users array säilyttäen sen arrayna
+      const userIndex = roomData.users.findIndex(u => u.uid === user.uid);
+      const updatedUsers = [...roomData.users];
+      updatedUsers[userIndex] = { ...updatedUsers[userIndex], ready: true };
+      
       await updateDoc(doc(db, 'rooms', actualRoomId), {
-        [`users.${roomData.users.findIndex(u => u.uid === user.uid)}.ready`]: true
+        users: updatedUsers
       });
       
       // Poista molemmat käyttäjät waiting-listasta - lisää viive estämään race condition
