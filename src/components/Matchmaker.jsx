@@ -722,7 +722,7 @@ const Matchmaker = ({ user, profile, onRoomJoined }) => {
             <div className="spinner">🔄</div>
             <h3>Etsitään chattikaveria...</h3>
             <p>⏱️ Aikaa kulunut: {getSearchDuration()} sekuntia</p>
-            <p>👥 Odottavia käyttäjiä ikäryhmässäsi: {waitingUsers.length}</p>
+            <p>👥 Aktiivisia käyttäjiä sivustolla: {activeUsersCount}</p>
             
             <button 
               onClick={stopSearching}

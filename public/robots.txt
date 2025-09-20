@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Salli hakukoneille löytää sivusto
+Sitemap: https://chatti.online/sitemap.xml
+
+# Estä bottien pääsy API-päätepistteisiin
+Disallow: /api/
+Disallow: /_*

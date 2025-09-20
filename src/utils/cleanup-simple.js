@@ -42,21 +42,7 @@ class CleanupService {
           if (leftAt < twoDaysAgo) {
             console.log(`🗑️ Poistetaan vanha epäaktiivinen huone: ${roomDoc.id}`);
             
-            // Poista ensin viestit
-            try {
-              const messagesSnap = await getDocs(collection(db, 'rooms', roomDoc.id, 'messages'));
-              if (messagesSnap.docs.length > 0) {
-                const batch = writeBatch(db);
-                messagesSnap.docs.forEach(msgDoc => {
-                  batch.delete(doc(db, 'rooms', roomDoc.id, 'messages', msgDoc.id));
-                });
-                await batch.commit();
-              }
-            } catch (msgError) {
-              console.warn('⚠️ Virheiden poisto epäonnistui:', msgError);
-            }
-            
-            // Poista huone
+            // Optimoitu: viestit ovat nyt room-dokumentissa, ei alkokoelmassa
             await deleteDoc(doc(db, 'rooms', roomDoc.id));
             deletedCount++;
           }

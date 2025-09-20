@@ -24,42 +24,43 @@ export const saveConversation = async (roomId, user1, user2) => {
   try {
     console.log('💾 Tallennetaan keskustelu rooms-kokoelmaan:', roomId);
 
-    // Hae kaikki viestit
-    const messagesQuery = query(
-      collection(db, 'rooms', roomId, 'messages'),
-      orderBy('timestamp', 'asc')
-    );
+    // Hae huone jossa viestit ovat array:na (optimoitu)
+    const roomRef = doc(db, 'rooms', roomId);
+    const roomSnap = await getDoc(roomRef);
     
-    const messagesSnapshot = await getDocs(messagesQuery);
-    const messages = [];
+    if (!roomSnap.exists()) {
+      console.log('ℹ️ Huonetta ei löydy');
+      return null;
+    }
     
-    messagesSnapshot.forEach(doc => {
-      const data = doc.data();
-      messages.push({
-        sender: data.senderId === user1?.uid ? (user1?.email || user1?.displayName) : (user2?.email || user2?.displayName),
-        message: data.text || '',
-        imageUrl: data.imageUrl || null,
-        time: data.timestamp
-      });
-    });
+    const roomData = roomSnap.data();
+    const messages = roomData.messages || [];
 
     if (messages.length === 0) {
       console.log('ℹ️ Ei viestejä tallennettavaksi');
       return null;
     }
 
+    // Muunna optimoituun tallennusmuotoon
+    const conversation = messages.map(msg => ({
+      sender: msg.senderId === user1?.uid ? (user1?.email || user1?.displayName) : (user2?.email || user2?.displayName),
+      message: msg.text || '',
+      imageUrl: msg.imageUrl || null,
+      time: msg.timestamp
+    }));
+
     // Yksinkertainen tallennusmuoto rooms-kokoelmaan
     const conversationData = {
       // 2 päivän säilytys (Firebase Rules hoitaa automaattisen poiston)
       expiresAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2 päivää
-      savedAt: serverTimestamp(),
+      savedAt: new Date(),
       
       // Käyttäjät (Gmail näkyviin)
       user1: user1?.email || user1?.displayName || 'Tuntematon',
       user2: user2?.email || user2?.displayName || 'Tuntematon',
       
-      // Yksinkertainen viestihistoria
-      conversation: messages,
+      // Optimoitu viestihistoria
+      conversation,
       messageCount: messages.length
     };
 

@@ -179,7 +179,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     markSelfReady();
   }, [roomId, user?.uid]);
 
-  // Kuuntele viestejä reaaliajassa - vain kun huone on valmis
+  // Kuuntele viestejä reaaliajassa - optimoitu versio
   useEffect(() => {
     if (!roomId || !roomReady) {
       setLoading(false);
@@ -188,48 +188,44 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
 
     console.log("Aloitetaan viestien kuuntelu huoneelle:", roomId);
 
-    const q = query(
-      collection(db, 'rooms', roomId, 'messages'),
-      orderBy('timestamp', 'asc')
-    );
-
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      console.log("Viestejä löytyi:", snapshot.size);
-      const messageList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      
-      // 🛡️ OFFLINE MODEROINTI - Tarkista uudet viestit
-      if (messageList.length > 0) {
-        for (const message of messageList) {
-          // Tarkista vain viestit jotka eivät ole omia ja joita ei ole vielä moderoitu
-          if (message.senderId !== user?.uid && !message.moderationChecked) {
-            try {
-              console.log(`🧠 Offline-moderoi viestiä: "${message.text}"`);
-              
-              const moderationResult = await smartModerationService.moderateMessage(
-                message.text, 
-                message.senderId
-              );
-              
-              console.log('📊 Offline moderation tulos:', moderationResult);
-              
-              // Jos viesti on haitallinen, merkitse se
-              if (moderationResult.isHarmful) {
-                console.log(`⚠️ HAITALLINEN VIESTI HAVAITTU: ${message.text}`);
-                // Offline-moderointi toimii, mutta ei tarvitse tallentaa Firestoreen
+    // Kuuntele room-dokumenttia jossa viestit ovat array:na
+    const unsubscribe = onSnapshot(doc(db, 'rooms', roomId), async (docSnap) => {
+      if (docSnap.exists()) {
+        const roomData = docSnap.data();
+        const messageList = roomData.messages || [];
+        
+        console.log("Viestejä löytyi:", messageList.length);
+        
+        // 🛡️ OFFLINE MODEROINTI - Tarkista uudet viestit
+        if (messageList.length > 0) {
+          for (const message of messageList) {
+            // Tarkista vain viestit jotka eivät ole omia ja joita ei ole vielä moderoitu
+            if (message.senderId !== user?.uid && !message.moderationChecked) {
+              try {
+                const moderationResult = await smartModerationService.moderateMessage(
+                  message.text, 
+                  message.senderId
+                );
+                
+                // Jos viesti on haitallinen, merkitse se
+                if (moderationResult.isHarmful) {
+                  console.log(`⚠️ HAITALLINEN VIESTI HAVAITTU: ${message.text}`);
+                }
+                
+              } catch (error) {
+                console.error('❌ Virhe offline-moderoinnissa:', error);
               }
-              
-            } catch (error) {
-              console.error('❌ Virhe offline-moderoinnissa:', error);
             }
           }
         }
+        
+        setMessages(messageList);
+        setLoading(false);
+      } else {
+        console.warn("⚠️ Huone ei enää ole olemassa:", roomId);
+        roomActiveRef.current = false;
+        onLeaveRoom();
       }
-      
-      setMessages(messageList);
-      setLoading(false);
     }, (error) => {
       console.error("Virhe viestien kuuntelussa:", error);
       setLoading(false);
@@ -687,10 +683,12 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         return;
       }
 
-      // 3. Lähetä kuvaviesti chatiin (turvallisesti tallennettu)
+      // 3. Lähetä kuvaviesti chatiin - optimoitu versio
       setUploadProgress('Lähetetään kuvaa chatiin...');
-      await addDoc(collection(db, `rooms/${roomId}/messages`), {
-        text: '', // Tyhjä teksti kuvaviestille
+      
+      const imageMessage = {
+        id: 'img_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+        text: '',
         imageUrl: imageData.url,
         imageDeleteUrl: imageData.deleteUrl,
         imageExpiration: imageData.expiration,
@@ -698,9 +696,27 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         senderId: user.uid,
         senderName: profile?.nickname || user.displayName || 'Tuntematon',
         senderAge: profile?.age || 'Ei määritelty',
-        timestamp: serverTimestamp(),
-        moderationChecked: true, // Kuva on jo moderoitu
-        isPrivate: true // Merkitse yksityiseksi chat-kuvaksi
+        timestamp: new Date(),
+        moderationChecked: true,
+        isPrivate: true
+      };
+      
+      // Hae nykyiset viestit ja lisää kuva
+      const roomRef = doc(db, 'rooms', roomId);
+      const roomSnap = await getDoc(roomRef);
+      
+      let currentMessages = [];
+      if (roomSnap.exists()) {
+        const roomData = roomSnap.data();
+        currentMessages = roomData.messages || [];
+      }
+      
+      currentMessages.push(imageMessage);
+      
+      await updateDoc(roomRef, {
+        messages: currentMessages,
+        lastMessage: imageMessage.timestamp,
+        lastActivity: new Date()
       });
 
       console.log('✅ Kuvaviesti lähetetty');
@@ -869,18 +885,39 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         alert(offlineResult.warningMessage);
       }
       
-      // Lähetä viesti
-      console.log("Lähetetään viesti:", newMessage.trim());
+      // Lähetä viesti - optimoitu versio (array-tallennus)
+      console.log("Lähetetään viesti huoneeseen:", roomId);
       
+      const messageText = newMessage.trim();
       const messageData = {
-        text: newMessage.trim(),
+        id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+        text: messageText,
         senderId: user.uid,
         senderName: profile.displayName,
-        timestamp: serverTimestamp(),
+        timestamp: new Date(),
         roomId: roomId
       };
 
-      await addDoc(collection(db, 'rooms', roomId, 'messages'), messageData);
+      // Hae nykyiset viestit ja lisää uusi
+      const roomRef = doc(db, 'rooms', roomId);
+      const roomSnap = await getDoc(roomRef);
+      
+      let currentMessages = [];
+      if (roomSnap.exists()) {
+        const roomData = roomSnap.data();
+        currentMessages = roomData.messages || [];
+      }
+      
+      // Lisää uusi viesti array:hin
+      currentMessages.push(messageData);
+      
+      // Päivitä room-dokumentti
+      await updateDoc(roomRef, {
+        messages: currentMessages,
+        lastMessage: messageData.timestamp,
+        lastActivity: new Date()
+      });
+      
       setNewMessage('');
       
       // Nollaa typing-status viestin lähettämisen jälkeen
@@ -915,7 +952,12 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
           roomId: roomId
         };
 
-        await addDoc(collection(db, 'rooms', roomId, 'messages'), messageData);
+        await updateDoc(roomRef, {
+          messages: currentMessages,
+          lastMessage: messageData.timestamp,
+          lastActivity: new Date()
+        });
+        
         setNewMessage('');
         
         // Nollaa typing-status fallback-tapauksessakin
@@ -1033,7 +1075,10 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         type: 'system',
       };
       try {
-        await setDoc(doc(db, 'rooms', roomId, 'messages', leaveMessage.id), leaveMessage);
+        // Optimoitu: lisää system-viesti messages-arrayhyn
+        await updateDoc(doc(db, 'rooms', roomId), {
+          messages: arrayUnion(leaveMessage)
+        });
       } catch (e) {
         // Hiljainen epäonnistuminen (esim. unload)
       }
@@ -1254,7 +1299,10 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
             type: 'system'
           };
           
-          await setDoc(doc(db, 'rooms', roomId, 'messages', leaveMessage.id), leaveMessage);
+          // Optimoitu: lisää system-viesti messages-arrayhyn
+          await updateDoc(doc(db, 'rooms', roomId), {
+            messages: arrayUnion(leaveMessage)
+          });
           console.log("📤 Lähetettiin 'chat päättynyt' -viesti toiselle käyttäjälle");
           
           // Odota hetki että viesti ehtii perille
@@ -1264,58 +1312,32 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         }
       }
       
-      // Poista kaikki viestit ja niihin liittyvät kuvat ennen huoneen poistamista - NOPEA BATCH-VERSIO
+      // Optimoitu: viestit ovat nyt room-dokumentissa, ei subkokoelmassa
       try {
-        const msgsSnap = await getDocs(collection(db, 'rooms', roomId, 'messages'));
+        const roomRef = doc(db, 'rooms', roomId);
+        const roomSnap = await getDoc(roomRef);
         
-        if (msgsSnap.docs.length > 0) {
-          console.log(`🗑️ Poistetaan ${msgsSnap.docs.length} viestiä ja niihin liittyvät kuvat (jos on)...`);
+        if (roomSnap.exists()) {
+          const roomData = roomSnap.data();
+          const messages = roomData.messages || [];
           
-          // Poista ensin mahdolliset Storage-kuvat ja vanhat ImgBB-kuvat
-          for (const msgDoc of msgsSnap.docs) {
-            const data = msgDoc.data();
-            if (data?.imagePath) {
-              try {
-                const fileRef = ref(storage, data.imagePath);
-                await deleteObject(fileRef);
-                console.log(`🗑️ Poistettu Storage-kuva: ${data.imagePath}`);
-              } catch (fileErr) {
-                // Jos bucket puuttuu, ohitetaan siivous hiljaisesti
-                if ((fileErr?.code || '').includes('no-default-bucket')) {
-                  console.warn('ℹ️ Storage bucket puuttuu, ohitetaan Storage-kuvien poisto.');
-                } else {
-                  console.warn(`⚠️ Kuvan poisto epäonnistui (${data.imagePath}):`, fileErr?.message || fileErr);
+          if (messages.length > 0) {
+            console.log(`🗑️ Poistetaan ${messages.length} viestiä ja niihin liittyvät kuvat...`);
+            
+            // Poista ImgBB-kuvat
+            for (const message of messages) {
+              if (message?.imageDeleteUrl) {
+                try {
+                  await fetch(message.imageDeleteUrl, { method: 'GET', mode: 'no-cors' });
+                  console.log('🗑️ Pyyntö lähetetty ImgBB-kuvan poistoon');
+                } catch (imgbbErr) {
+                  console.warn('⚠️ ImgBB-kuvan poisto epäonnistui:', imgbbErr?.message || imgbbErr);
                 }
               }
             }
-            // Poista myös vanhat ImgBB-kuvat jos deleteUrl tallessa
-            if (data?.imageDeleteUrl) {
-              try {
-                await fetch(data.imageDeleteUrl, { method: 'GET', mode: 'no-cors' });
-                console.log('🗑️ Pyyntö lähetetty ImgBB-kuvan poistoon');
-              } catch (imgbbErr) {
-                console.warn('⚠️ ImgBB-kuvan poisto epäonnistui:', imgbbErr?.message || imgbbErr);
-              }
-            }
-          }
-          
-          // Firestore batch voi poistaa max 500 dokumenttia kerralla
-          const batchSize = 500;
-          const docs = msgsSnap.docs;
-          
-          for (let i = 0; i < docs.length; i += batchSize) {
-            const batch = writeBatch(db);
-            const batchDocs = docs.slice(i, i + batchSize);
             
-            batchDocs.forEach(msgDoc => {
-              batch.delete(doc(db, 'rooms', roomId, 'messages', msgDoc.id));
-            });
-            
-            await batch.commit();
-            console.log(`✅ Poistettu batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(docs.length/batchSize)}`);
+            console.log('🧹 Viestit siivottu optimoidusti!');
           }
-          
-          console.log('🧹 Kaikki viestit siivottu nopeasti!');
         }
       } catch (msgsErr) {
         console.warn('⚠️ Viestien siivous epäonnistui (jatketaan):', msgsErr?.message || msgsErr);
