@@ -5,7 +5,6 @@ import { smartModerationService } from '../utils/smart-moderation.js';
 import { handleInappropriateContent, isUserBanned, BAN_REASONS } from '../utils/ban-system.js';
 // Firebase Functions moderointi poistettu - käytetään vain offline-moderointia
 import FeedbackModal from './FeedbackModal';
-import BannedPage from './BannedPage';
 
 const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
   const [messages, setMessages] = useState([]);
@@ -35,23 +34,6 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     if (!Array.isArray(users)) return null;
     return users.find(u => u?.uid && u.uid !== user?.uid) || null;
   }, [roomData?.users, user?.uid]);
-
-  // Tarkista banni-status heti alussa
-  useEffect(() => {
-    const checkBanStatus = async () => {
-      if (!user?.uid) return;
-      
-      try {
-        const banStatus = await isUserBanned(user.uid);
-        setUserBanStatus(banStatus);
-        console.log('🛡️ Banni-status tarkistettu:', banStatus);
-      } catch (error) {
-        console.error('❌ Virhe banni-statuksen tarkistuksessa:', error);
-      }
-    };
-
-    checkBanStatus();
-  }, [user?.uid]);
 
   // Kuuntele huoneen valmiutta
   useEffect(() => {
@@ -1404,11 +1386,6 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         </div>
       </div>
     );
-  }
-
-  // Jos käyttäjä on bannattu, näytä banned-sivu
-  if (userBanStatus?.banned) {
-    return <BannedPage user={user} banInfo={userBanStatus} />;
   }
 
   return (

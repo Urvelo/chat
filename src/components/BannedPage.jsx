@@ -23,23 +23,8 @@ const BannedPage = ({ user, onAppeal }) => {
   }, [user?.uid]);
 
   const handleAppeal = () => {
-    const subject = 'Valitus bannauksesta - chatti.online';
-    const body = `Hei,
-
-Haluaisin tehdä valituksen saamastani bannauksesta.
-
-Käyttäjätunnus: ${user?.email || 'Ei tiedossa'}
-Bannin syy: ${banInfo?.reason || 'Ei tiedossa'}
-Bannin tyyppi: ${banInfo?.permanent ? 'Pysyvä' : 'Määräaikainen'}
-${!banInfo?.permanent && banInfo?.endsAt ? `Päättyy: ${banInfo.endsAt.toLocaleString('fi-FI')}` : ''}
-
-Perustelut valitukselle:
-[Kirjoita tähän miksi uskot että banni on aiheeton]
-
-Ystävällisin terveisin,
-[Nimesi]`;
-
-    window.location.href = `mailto:mailit@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    // Avaa Formspree-lomake uudessa välilehdessä
+    window.open('https://formspree.io/f/mwpngaaz', '_blank');
   };
 
   if (loading) {
@@ -90,14 +75,14 @@ Ystävällisin terveisin,
         <button 
           className="appeal-button"
           onClick={handleAppeal}
-          title="Lähetä valitus sähköpostilla"
+          title="Avaa valitus-lomake"
         >
-          📧 Tee valitus
+          � Tee valitus
         </button>
 
         <div className="appeal-info">
           <small>
-            Valitus lähetetään osoitteeseen mailit@gmail.com.<br/>
+            Valitus-lomake avautuu uudessa välilehdessä.<br/>
             Vastaamme valituksiin 1-3 arkipäivän kuluessa.
           </small>
         </div>
@@ -192,9 +177,10 @@ Ystävällisin terveisin,
         }
 
         .appeal-info {
-          color: #888;
-          font-size: 0.8rem;
-          line-height: 1.4;
+          color: #666;
+          font-size: 0.75rem;
+          line-height: 1.3;
+          margin-top: 15px;
         }
 
         .loading {

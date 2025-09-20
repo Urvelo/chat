@@ -4,14 +4,17 @@ import Auth from './components/Auth';
 import ProfileSetup from './components/ProfileSetup';
 import Matchmaker from './components/Matchmaker';
 import ChatRoom from './components/ChatRoom';
+import BannedPage from './components/BannedPage';
 import GoogleAuthTest from './components/GoogleAuthTest';
 import { cleanupService } from './utils/cleanup';
+import { isUserBanned } from './utils/ban-system.js';
 import { supabase } from './supabase';
 import './App.css';
 
 function App() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [banStatus, setBanStatus] = useState(null);
   const [currentRoom, setCurrentRoom] = useState(null);
   const [roomData, setRoomData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -159,22 +162,45 @@ function App() {
     console.log("✅ Lataus valmis - tervetuloa-sivu näytetään");
   }, []);
 
-  // Kun käyttäjä asetetaan (kirjautuminen), siirry profiilisetupiin
+  // Kun käyttäjä asetetaan (kirjautuminen), tarkista banni ja siirry profiilisetupiin
   useEffect(() => {
-    console.log("🔄 Tarkistetaan käyttäjän tila:", {
-      user: !!user,
-      profile: !!profile,
-      currentView,
-      userDisplayName: user?.displayName
-    });
-    
-    if (user && !profile) {
-      console.log("👤 Käyttäjä on kirjautunut mutta ei profiilia, siirtymä profiiliin");
-      setCurrentView('profile');
-    } else if (user && profile) {
-      console.log("✅ Käyttäjä ja profiili OK, siirtymä matchmakeriin");
-      setCurrentView('matchmaker');
-    }
+    const checkUserStatus = async () => {
+      console.log("🔄 Tarkistetaan käyttäjän tila:", {
+        user: !!user,
+        profile: !!profile,
+        currentView,
+        userDisplayName: user?.displayName
+      });
+      
+      if (user && user.uid) {
+        // Tarkista banni-status HETI kirjautumisen jälkeen
+        try {
+          console.log('🛡️ Tarkistetaan bannia käyttäjälle:', user.uid);
+          const userBanStatus = await isUserBanned(user.uid);
+          setBanStatus(userBanStatus);
+          console.log('🛡️ Banni-status:', userBanStatus);
+          
+          // Jos bannattu, älä jatka muihin sivuihin
+          if (userBanStatus?.banned) {
+            console.log('🚫 Käyttäjä on bannattu, näytetään ban-sivu');
+            return;
+          }
+        } catch (error) {
+          console.error('❌ Virhe banni-tarkistuksessa:', error);
+        }
+        
+        // Jos ei bannia, jatka normaalisti
+        if (!profile) {
+          console.log("👤 Käyttäjä on kirjautunut mutta ei profiilia, siirtymä profiiliin");
+          setCurrentView('profile');
+        } else {
+          console.log("✅ Käyttäjä ja profiili OK, siirtymä matchmakeriin");
+          setCurrentView('matchmaker');
+        }
+      }
+    };
+
+    checkUserStatus();
   }, [user, profile]);
 
   // Kun profiili on valmis, siirry matchmakeriin
@@ -216,41 +242,46 @@ function App() {
     <div className="app-container">
       {/* Header ja footer poistettu kokonaan */}
       
-      {/* Pääsisältö */}
-      <main className="app-main">
-        {currentView === 'welcome' && (
-          <Welcome onContinue={() => setCurrentView('auth')} />
-        )}
+      {/* Jos käyttäjä on bannattu, näytä vain ban-sivu */}
+      {banStatus?.banned && user ? (
+        <BannedPage user={user} banInfo={banStatus} />
+      ) : (
+        /* Pääsisältö */
+        <main className="app-main">
+          {currentView === 'welcome' && (
+            <Welcome onContinue={() => setCurrentView('auth')} />
+          )}
 
-        {currentView === 'auth' && (
-          <Auth user={user} setUser={setUser} />
-        )}
+          {currentView === 'auth' && (
+            <Auth user={user} setUser={setUser} />
+          )}
 
-        {currentView === 'profile' && user && (
-          <ProfileSetup 
-            user={user} 
-            onProfileComplete={handleProfileComplete}
-          />
-        )}
+          {currentView === 'profile' && user && (
+            <ProfileSetup 
+              user={user} 
+              onProfileComplete={handleProfileComplete}
+            />
+          )}
 
-        {currentView === 'matchmaker' && user && profile && (
-          <Matchmaker 
-            user={user}
-            profile={profile}
-            onRoomJoined={handleRoomJoined}
-          />
-        )}
+          {currentView === 'matchmaker' && user && profile && (
+            <Matchmaker 
+              user={user}
+              profile={profile}
+              onRoomJoined={handleRoomJoined}
+            />
+          )}
 
-        {currentView === 'chat' && user && profile && currentRoom && (
-          <ChatRoom
-            user={user}
-            profile={profile}
-            roomId={currentRoom}
-            roomData={roomData}
-            onLeaveRoom={handleLeaveRoom}
-          />
-        )}
-      </main>
+          {currentView === 'chat' && user && profile && currentRoom && (
+            <ChatRoom
+              user={user}
+              profile={profile}
+              roomId={currentRoom}
+              roomData={roomData}
+              onLeaveRoom={handleLeaveRoom}
+            />
+          )}
+        </main>
+      )}
     </div>
   );
 }
