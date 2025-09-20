@@ -219,8 +219,7 @@ export const handleInappropriateContent = async (userId, type, roomId, details =
       // Kuva: välitön 24h banni
       const banResult = await banUser(userId, 'Sopimaton kuva', false);
       
-      // Lähetä viesti chatiin
-      await sendModerationMessage(roomId, 'image', banResult);
+      // EI lähetetä viestiä chatiin - bannattu käyttäjä saa oman sivun
       
       return { banned: true, banResult };
 
@@ -235,13 +234,11 @@ export const handleInappropriateContent = async (userId, type, roomId, details =
         // Kynnys ylitetty → banni
         const banResult = await banUser(userId, `${banSettings.textViolationsForBan} sopimatonta viestiä 24h sisällä`, false);
         
-        // Lähetä viesti chatiin
-        await sendModerationMessage(roomId, 'text_ban', banResult);
+        // EI lähetetä viestiä chatiin - bannattu käyttäjä saa oman sivun
         
         return { banned: true, banResult };
       } else {
-        // Alle kynnyksen → vain varoitus chatissa
-        await sendModerationMessage(roomId, 'text_warning', { violationCount, threshold: banSettings.textViolationsForBan });
+        // Alle kynnyksen → EI varoitusta chatissa
         
         return { banned: false, violationCount };
       }
@@ -250,49 +247,6 @@ export const handleInappropriateContent = async (userId, type, roomId, details =
   } catch (error) {
     console.error('❌ Virhe sopimattoman sisällön käsittelyssä:', error);
     throw error;
-  }
-};
-
-// Lähetä moderointi-viesti chatiin
-const sendModerationMessage = async (roomId, type, data) => {
-  try {
-    let messageText = '';
-
-    switch (type) {
-      case 'image':
-        if (data.permanent) {
-          messageText = '🚫 Toinen käyttäjä on bannattu pysyvästi sopimattoman kuvan vuoksi.';
-        } else {
-          messageText = `⏰ Toinen käyttäjä on bannattu 24 tunniksi sopimattoman kuvan vuoksi. (${data.banCount}/3 bannia)`;
-        }
-        break;
-        
-      case 'text_ban':
-        if (data.permanent) {
-          messageText = '🚫 Toinen käyttäjä on bannattu pysyvästi toistuvien sopimattomien viestien vuoksi.';
-        } else {
-          messageText = `⏰ Toinen käyttäjä on bannattu 24 tunniksi (5 sopimatonta viestiä). (${data.banCount}/3 bannia)`;
-        }
-        break;
-        
-      case 'text_warning':
-        messageText = `⚠️ Sopimatonta sisältöä.`;
-        break;
-    }
-
-    // Lähetä systeemiviesti chatiin
-    await addDoc(collection(db, `rooms/${roomId}/messages`), {
-      text: messageText,
-      type: 'system',
-      senderId: 'moderation-system',
-      senderName: 'Moderointi',
-      timestamp: serverTimestamp(),
-      moderationMessage: true
-    });
-
-    console.log(`📢 Moderointi-viesti lähetetty: ${messageText}`);
-  } catch (error) {
-    console.error('❌ Virhe moderointi-viestin lähetyksessä:', error);
   }
 };
 
