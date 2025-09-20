@@ -524,16 +524,23 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         harassment: THRESHOLDS.harassment * 100 + '%'
       });
 
-      // 🧪 DEBUG MODE: Aseta ympäristömuuttuja VITE_DEBUG_MODERATION=true testaamista varten
-      const isDebugMode = import.meta.env.VITE_DEBUG_MODERATION === 'true';
+      // 🧪 DEBUG MODE: Testaa bannijärjestelmää matalalla kynnyksellä
+      // Käytetään fallback true jos env ei lataudu productionissa
+      const isDebugMode = import.meta.env.VITE_DEBUG_MODERATION === 'true' || true; // TEMPORARY: Force debug mode
+      console.log('🧪 Debug moderation mode:', isDebugMode);
       if (isDebugMode) {
-        console.log('🧪 DEBUG MODE: Moderointi asetettu tiukaksi testaamista varten');
-        // Testaa bannijärjestelmää käyttämällä matalampaa kynnystä
-        if (scores['sexual'] > 0.01 || scores['violence'] > 0.01) {
-          console.log('🧪 DEBUG: Testataan bannia matalalla kynnyksellä');
+        console.log('🧪 DEBUG MODE: Moderointi asetettu erittäin tiukaksi testaamista varten');
+        // Testaa bannijärjestelmää käyttämällä erittäin matalaa kynnystä
+        if (scores['sexual'] > 0.001 || scores['violence'] > 0.001 || scores['harassment'] > 0.001) {
+          console.log('🧪 DEBUG: Testataan bannia erittäin matalalla kynnyksellä');
+          console.log('🧪 Triggering scores:', {
+            sexual: (scores['sexual'] * 100).toFixed(3) + '%',
+            violence: (scores['violence'] * 100).toFixed(3) + '%', 
+            harassment: (scores['harassment'] * 100).toFixed(3) + '%'
+          });
           return {
             flagged: true,
-            categories: ['debug_test'],
+            categories: ['debug_test_very_low_threshold'],
             scores
           };
         }
