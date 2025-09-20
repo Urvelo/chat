@@ -93,7 +93,8 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         console.log("  - all env vars:", import.meta.env);
         console.log("  - profileAge:", profile?.age);
         console.log("  - isOver18:", profile?.age >= 18);
-        console.log("  - imageButtonDisabled:", (!isReady || imageUploading || userBanStatus?.banned || !profile?.age || profile.age < 18));
+        console.log("  - isGoogleUser:", user?.isGoogleUser);
+        console.log("  - imageButtonDisabled:", (!isReady || imageUploading || userBanStatus?.banned || !profile?.age || profile.age < 18 || !user?.isGoogleUser));
         setRoomReady(isReady);
         setWaitingForOther(false);
       } else {
@@ -585,18 +586,16 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       return;
     }
 
-    // Tarkista että käyttäjä on 18+ (Google-käyttäjyys ei pakollinen, mutta suositeltava)
+    // Tarkista että käyttäjä on 18+ 
     if (!profile?.age || profile.age < 18) {
       alert('🚫 Vain 18+ vuotiaat voivat lähettää kuvia.');
       return;
     }
 
-    // Varoita jos ei Google-käyttäjä, mutta salli silti
+    // PAKOLLINEN: Vain Google-käyttäjät voivat lähettää kuvia
     if (!user?.isGoogleUser) {
-      const confirmUpload = confirm('⚠️ Suosittelemme Google-tiliä kuvapalveluun.\n\nJatka kuitenkin kuvan lähetystä?');
-      if (!confirmUpload) {
-        return;
-      }
+      alert('🚫 Vain Google-käyttäjät voivat lähettää kuvia.\n\nKirjaudu sisään Google-tilillä käyttääksesi kuvapalvelua.');
+      return;
     }
 
     // Tarkista tiedostotyyppi
@@ -1558,7 +1557,8 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
               console.log("  - imgbbKey:", !!import.meta.env.VITE_IMGBB_API_KEY);
               console.log("  - profileAge:", profile?.age);
               console.log("  - isOver18:", profile?.age >= 18);
-              const disabled = (!roomReady || imageUploading || userBanStatus?.banned || !profile?.age || profile.age < 18);
+              console.log("  - isGoogleUser:", user?.isGoogleUser);
+              const disabled = (!roomReady || imageUploading || userBanStatus?.banned || !profile?.age || profile.age < 18 || !user?.isGoogleUser);
               console.log("  - shouldBeDisabled:", disabled);
               if (disabled) {
                 console.log("❌ Button should be disabled!");
@@ -1567,17 +1567,19 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
               }
             }}
             style={{ 
-              pointerEvents: (!roomReady || imageUploading || userBanStatus?.banned || !profile?.age || profile.age < 18) ? 'none' : 'auto',
-              opacity: (!roomReady || imageUploading || userBanStatus?.banned || !profile?.age || profile.age < 18) ? 0.6 : 1 
+              pointerEvents: (!roomReady || imageUploading || userBanStatus?.banned || !profile?.age || profile.age < 18 || !user?.isGoogleUser) ? 'none' : 'auto',
+              opacity: (!roomReady || imageUploading || userBanStatus?.banned || !profile?.age || profile.age < 18 || !user?.isGoogleUser) ? 0.6 : 1 
             }}
             title={
               userBanStatus?.banned 
                 ? "Et voi lähettää kuvia (bannattu)"
-                : ((!profile?.age || profile.age < 18)
-                    ? "Kuvan lähetys vain 18+ käyttäjille"
-                    : (!roomReady 
-                        ? `Huone ei valmis (roomReady: ${roomReady})`
-                        : (imageUploading ? uploadProgress || "Lähettää kuvaa..." : "Lähetä kuva")))
+                : (!user?.isGoogleUser
+                    ? "Kuvan lähetys vain Google-käyttäjille"
+                    : ((!profile?.age || profile.age < 18)
+                        ? "Kuvan lähetys vain 18+ käyttäjille"
+                        : (!roomReady 
+                            ? `Huone ei valmis (roomReady: ${roomReady})`
+                            : (imageUploading ? uploadProgress || "Lähettää kuvaa..." : "Lähetä kuva"))))
             }
           >
             {imageUploading ? (
