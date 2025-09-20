@@ -524,26 +524,25 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         harassment: THRESHOLDS.harassment * 100 + '%'
       });
 
-      // 🧪 DEBUG MODE: Testaa bannijärjestelmää matalalla kynnyksellä
-      // Käytetään fallback true jos env ei lataudu productionissa
-      const isDebugMode = import.meta.env.VITE_DEBUG_MODERATION === 'true' || true; // TEMPORARY: Force debug mode
+      // 🧪 DEBUG MODE: TESTAA BÄNNIJÄRJESTELMÄÄ - ÄÄRIMMÄISEN HERKKÄ!
+      const isDebugMode = import.meta.env.VITE_DEBUG_MODERATION === 'true';
       console.log('🧪 Debug moderation mode:', isDebugMode);
       if (isDebugMode) {
-        console.log('🧪 DEBUG MODE: Moderointi asetettu erittäin tiukaksi testaamista varten');
-        // Testaa bannijärjestelmää käyttämällä erittäin matalaa kynnystä
-        if (scores['sexual'] > 0.001 || scores['violence'] > 0.001 || scores['harassment'] > 0.001) {
-          console.log('🧪 DEBUG: Testataan bannia erittäin matalalla kynnyksellä');
-          console.log('🧪 Triggering scores:', {
-            sexual: (scores['sexual'] * 100).toFixed(3) + '%',
-            violence: (scores['violence'] * 100).toFixed(3) + '%', 
-            harassment: (scores['harassment'] * 100).toFixed(3) + '%'
-          });
-          return {
-            flagged: true,
-            categories: ['debug_test_very_low_threshold'],
-            scores
-          };
-        }
+        console.log('🧪 DEBUG MODE: BÄNNIJÄRJESTELMÄ TESTAUS - KAIKKI KUVAT BANNATAAN!');
+        console.log('🧪 Scores:', {
+          sexual: (scores['sexual'] * 100).toFixed(6) + '%',
+          violence: (scores['violence'] * 100).toFixed(6) + '%', 
+          harassment: (scores['harassment'] * 100).toFixed(6) + '%'
+        });
+        
+        // DEBUG: Bännää KAIKKI kuvat testaamista varten!
+        console.log('🧪 DEBUG: FORCING BAN FOR TESTING!');
+        return {
+          flagged: true,
+          categories: ['debug_forced_ban'],
+          scores,
+          debugMessage: 'DEBUG MODE: Kaikki kuvat estetty testaamista varten'
+        };
       }
 
       // 1) Estä aina alaikäisiin liittyvä seksi
