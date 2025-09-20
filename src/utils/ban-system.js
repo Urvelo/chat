@@ -67,9 +67,22 @@ export const recordViolation = async (userId, type, details = {}) => {
   try {
     const docId = getUserDocId(userId);
     
+    // Hae käyttäjän Gmail-osoite bännien hallintaa varten
+    let userEmail = null;
+    try {
+      const userRef = doc(db, 'profiles', userId);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        userEmail = userSnap.data().email;
+      }
+    } catch (error) {
+      console.warn('⚠️ Ei voitu hakea käyttäjän sähköpostia:', error);
+    }
+    
     const violation = {
       userId: docId, // Tallenna puhdas Google ID
       originalUserId: userId, // Säilytä alkuperäinen referenssiksi  
+      userEmail, // Gmail helpottaa bännien hallintaa
       type, // 'inappropriate_text' tai 'inappropriate_image'
       details,
       timestamp: serverTimestamp(),
@@ -165,9 +178,22 @@ export const banUser = async (userId, reason, permanent = false) => {
     const userDocRef = doc(db, 'users', userId);
     const userDoc = await getDoc(userDocRef);
 
+    // Hae käyttäjän Gmail-osoite bännien hallintaa varten
+    let userEmail = null;
+    try {
+      const profileRef = doc(db, 'profiles', userId);
+      const profileSnap = await getDoc(profileRef);
+      if (profileSnap.exists()) {
+        userEmail = profileSnap.data().email;
+      }
+    } catch (error) {
+      console.warn('⚠️ Ei voitu hakea käyttäjän sähköpostia:', error);
+    }
+
     let banData = {
       banReason: reason,
-      lastBanDate: serverTimestamp()
+      lastBanDate: serverTimestamp(),
+      userEmail // Gmail helpottaa bännien hallintaa
     };
 
     // Laske bannien määrä
@@ -198,6 +224,7 @@ export const banUser = async (userId, reason, permanent = false) => {
     // Tallenna banni-logi
     await addDoc(collection(db, 'ban_logs'), {
       userId,
+      userEmail, // Gmail helpottaa bännien hallintaa
       reason,
       banCount,
       permanent: banData.bannedUntil === 'permanent',

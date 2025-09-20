@@ -3,6 +3,7 @@ import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, u
 import { db, storage, ref, uploadBytes, getDownloadURL, deleteObject } from '../firebase';
 import { smartModerationService } from '../utils/smart-moderation.js';
 import { handleInappropriateContent, isUserBanned, BAN_REASONS } from '../utils/ban-system.js';
+import { saveConversationFromRoom } from '../utils/conversation-saver.js';
 // Firebase Functions moderointi poistettu - käytetään vain offline-moderointia
 import FeedbackModal from './FeedbackModal';
 
@@ -1009,6 +1010,18 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     roomActiveRef.current = false;
 
     try {
+      // Tallenna keskustelu ennen poistamista (jos viestejä on ja huone on valmis)
+      if (roomReady && roomData) {
+        try {
+          console.log('💾 Tallennetaan keskustelu (fast close)...');
+          await saveConversationFromRoom(roomId, roomData, reason);
+          console.log('✅ Keskustelu tallennettu (fast close)');
+        } catch (saveError) {
+          console.error('❌ Virhe keskustelun tallennuksessa (fast close):', saveError);
+          // Jatka huoneen poistamiseen vaikka tallennus epäonnistuisi
+        }
+      }
+
       // Lähetä yksinkertainen järjestelmäviesti (parhaamme mukaan)
       const leaveMsgId = 'leave_' + Date.now();
       const leaveMessage = {
@@ -1039,7 +1052,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       // Yritä poistua UI:sta joka tapauksessa
       onLeaveRoom();
     }
-  }, [roomId, user?.uid, user?.displayName, onLeaveRoom]);
+  }, [roomId, user?.uid, user?.displayName, roomReady, roomData, onLeaveRoom]);
 
   // Sulje huone automaattisesti kun sivu piilotetaan/poistutaan VAIN PITKÄN VIIVEEN JÄLKEEN
   useEffect(() => {
@@ -1196,6 +1209,17 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       setShowReportMenu(false);
       
       if (shouldLeave) {
+        // Tallenna keskustelu ilmoitusta varten
+        if (roomData) {
+          try {
+            console.log('💾 Tallennetaan keskustelu ilmoituksen vuoksi...');
+            await saveConversationFromRoom(roomId, roomData, 'user_reported');
+            console.log('✅ Keskustelu tallennettu ilmoitusta varten');
+          } catch (saveError) {
+            console.error('❌ Virhe keskustelun tallennuksessa (ilmoitus):', saveError);
+          }
+        }
+        
         // Poistu huoneesta automaattisesti
         leaveRoom();
       }
@@ -1209,6 +1233,18 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
   const leaveRoom = async () => {
     try {
       console.log("🗑️ Poistetaan chat-huone kokonaan:", roomId);
+      
+      // Tallenna keskustelu ennen poistamista (jos viestejä on)
+      if (roomReady && roomData) {
+        try {
+          console.log('💾 Tallennetaan keskustelu ennen huoneen poistamista...');
+          await saveConversationFromRoom(roomId, roomData, 'chat_ended');
+          console.log('✅ Keskustelu tallennettu onnistuneesti');
+        } catch (saveError) {
+          console.error('❌ Virhe keskustelun tallennuksessa:', saveError);
+          // Jatka huoneen poistamiseen vaikka tallennus epäonnistuisi
+        }
+      }
       
       // Jos huone ei ole vielä valmis, palauta toinen käyttäjä waiting-listaan
       if (!roomReady && otherUser) {
