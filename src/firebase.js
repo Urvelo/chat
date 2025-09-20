@@ -15,7 +15,8 @@ import {
   onSnapshot, 
   updateDoc, 
   deleteDoc, 
-  serverTimestamp 
+  serverTimestamp,
+  writeBatch 
 } from 'firebase/firestore';
 
 // Your web app's Firebase configuration
@@ -50,7 +51,8 @@ export {
   onSnapshot,
   updateDoc,
   deleteDoc,
-  serverTimestamp
+  serverTimestamp,
+  writeBatch
 };
 
 // Export Storage helpers

@@ -1,4 +1,5 @@
-// Keskustelujen tallennuspalvelu
+// Yksinkertainen keskustelujen tallennuspalvelu
+// Tallentaa vain rooms-kokoelmaan 2 päivän säilytyksellä
 import { 
   db, 
   collection, 
@@ -8,21 +9,22 @@ import {
   doc,
   query,
   orderBy,
-  serverTimestamp 
+  serverTimestamp,
+  setDoc 
 } from '../firebase';
 
 /**
- * Tallentaa keskustelun molempien käyttäjien Gmail-osoitteineen helppolukuiseen muotoon
+ * Tallentaa keskustelun rooms-kokoelmaan yksinkertaisessa muodossa
+ * Säilytys: 2 päivää, sen jälkeen Firebase Rules poistaa automaattisesti
  * @param {string} roomId - Huoneen ID
  * @param {object} user1 - Ensimmäinen käyttäjä {uid, email, displayName}
  * @param {object} user2 - Toinen käyttäjä {uid, email, displayName}
- * @param {string} reason - Tallennuksen syy (esim. "chat_ended", "reported_user", "admin_review")
  */
-export const saveConversation = async (roomId, user1, user2, reason = 'chat_ended') => {
+export const saveConversation = async (roomId, user1, user2) => {
   try {
-    console.log('💾 Tallennetaan keskustelu:', { roomId, user1: user1?.email, user2: user2?.email, reason });
+    console.log('💾 Tallennetaan keskustelu rooms-kokoelmaan:', roomId);
 
-    // Hae kaikki viestit aikajärjestyksessä
+    // Hae kaikki viestit
     const messagesQuery = query(
       collection(db, 'rooms', roomId, 'messages'),
       orderBy('timestamp', 'asc')
@@ -34,13 +36,10 @@ export const saveConversation = async (roomId, user1, user2, reason = 'chat_ende
     messagesSnapshot.forEach(doc => {
       const data = doc.data();
       messages.push({
-        id: doc.id,
-        senderId: data.senderId,
-        senderName: data.senderName || data.displayName || 'Tuntematon',
-        text: data.text || '',
+        sender: data.senderId === user1?.uid ? (user1?.email || user1?.displayName) : (user2?.email || user2?.displayName),
+        message: data.text || '',
         imageUrl: data.imageUrl || null,
-        timestamp: data.timestamp,
-        type: data.type || 'message'
+        time: data.timestamp
       });
     });
 
@@ -49,96 +48,41 @@ export const saveConversation = async (roomId, user1, user2, reason = 'chat_ende
       return null;
     }
 
-    // Hae käyttäjien Gmail-osoitteet profiileista
-    const getUserEmail = async (userId) => {
-      try {
-        const profileDoc = await getDoc(doc(db, 'profiles', userId));
-        if (profileDoc.exists()) {
-          return profileDoc.data().email || 'Ei sähköpostia';
-        }
-        return 'Profiilia ei löydy';
-      } catch (error) {
-        console.warn('⚠️ Virhe Gmail-osoitteen haussa:', userId, error);
-        return 'Virhe sähköpostin haussa';
-      }
-    };
-
-    const user1Email = user1?.email || await getUserEmail(user1?.uid);
-    const user2Email = user2?.email || await getUserEmail(user2?.uid);
-
-    // Luo helppolukuinen keskustelurakenne
+    // Yksinkertainen tallennusmuoto rooms-kokoelmaan
     const conversationData = {
-      // HEADER: Käyttäjätiedot (Gmail-osoitteet näkyviin)
-      conversationId: roomId,
+      // 2 päivän säilytys (Firebase Rules hoitaa automaattisen poiston)
+      expiresAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2 päivää
       savedAt: serverTimestamp(),
-      reason,
       
-      // KÄYTTÄJÄT (Gmail-osoitteet ensisijaisina)
-      user1: {
-        gmail: user1Email,
-        uid: user1?.uid,
-        displayName: user1?.displayName || 'Käyttäjä 1'
-      },
-      user2: {
-        gmail: user2Email,
-        uid: user2?.uid,
-        displayName: user2?.displayName || 'Käyttäjä 2'
-      },
+      // Käyttäjät (Gmail näkyviin)
+      user1: user1?.email || user1?.displayName || 'Tuntematon',
+      user2: user2?.email || user2?.displayName || 'Tuntematon',
       
-      // TILASTOT
-      messageCount: messages.length,
-      duration: messages.length > 1 ? {
-        started: messages[0].timestamp,
-        ended: messages[messages.length - 1].timestamp
-      } : null,
-      
-      // VIESTIT: Helppolukuisessa muodossa
-      messages: messages.map(msg => ({
-        // Näytä lähettäjä Gmail-osoitteella
-        sender: msg.senderId === user1?.uid ? user1Email : user2Email,
-        senderName: msg.senderName,
-        message: msg.text,
-        imageUrl: msg.imageUrl,
-        time: msg.timestamp,
-        type: msg.type
-      })),
-
-      // RAAKA DATA: Säilytä alkuperäiset ID:t
-      rawData: {
-        roomId,
-        user1Id: user1?.uid,
-        user2Id: user2?.uid,
-        messageIds: messages.map(m => m.id)
-      }
-    };
-
-    // Tallenna conversations-kokoelmaan
-    const conversationRef = await addDoc(collection(db, 'conversations'), conversationData);
-    
-    console.log('✅ Keskustelu tallennettu:', conversationRef.id);
-    console.log(`📧 Käyttäjät: ${user1Email} <-> ${user2Email}`);
-    console.log(`💬 Viestit: ${messages.length} kpl`);
-    
-    return {
-      conversationId: conversationRef.id,
-      user1Email,
-      user2Email,
+      // Yksinkertainen viestihistoria
+      conversation: messages,
       messageCount: messages.length
     };
 
+    // Tallenna suoraan rooms-kokoelmaan ID:llä "saved_[roomId]"
+    const savedRoomId = `saved_${roomId}`;
+    await setDoc(doc(db, 'rooms', savedRoomId), conversationData);
+    
+    console.log('✅ Keskustelu tallennettu rooms-kokoelmaan:', savedRoomId);
+    console.log(`📧 ${user1?.email || user1?.displayName} <-> ${user2?.email || user2?.displayName}`);
+    console.log(`💬 ${messages.length} viestiä`);
+    
+    return savedRoomId;
+
   } catch (error) {
     console.error('❌ Virhe keskustelun tallennuksessa:', error);
-    throw error;
+    return null;
   }
 };
 
 /**
  * Tallentaa keskustelun automaattisesti kun huone suljetaan
- * @param {string} roomId - Huoneen ID
- * @param {object} roomData - Huoneen data jossa users-array
- * @param {string} reason - Syy tallennukseen
  */
-export const saveConversationFromRoom = async (roomId, roomData, reason = 'chat_ended') => {
+export const saveConversationFromRoom = async (roomId, roomData) => {
   try {
     if (!roomData?.users || roomData.users.length < 2) {
       console.log('ℹ️ Ei tarpeeksi käyttäjiä keskustelun tallennukseen');
@@ -146,10 +90,10 @@ export const saveConversationFromRoom = async (roomId, roomData, reason = 'chat_
     }
 
     const [user1, user2] = roomData.users;
-    return await saveConversation(roomId, user1, user2, reason);
+    return await saveConversation(roomId, user1, user2);
     
   } catch (error) {
-    console.error('❌ Virhe automaattisessa keskustelun tallennuksessa:', error);
+    console.error('❌ Virhe keskustelun tallennuksessa:', error);
     return null;
   }
 };

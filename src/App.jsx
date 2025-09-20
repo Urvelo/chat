@@ -6,7 +6,7 @@ import Matchmaker from './components/Matchmaker';
 import ChatRoom from './components/ChatRoom';
 import BannedPage from './components/BannedPage';
 import GoogleAuthTest from './components/GoogleAuthTest';
-import { cleanupService } from './utils/cleanup';
+import { cleanupService } from './utils/cleanup-simple';
 import { isUserBanned } from './utils/ban-system.js';
 import { supabase } from './supabase';
 import './App.css';

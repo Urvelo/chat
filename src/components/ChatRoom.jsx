@@ -1014,7 +1014,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       if (roomReady && roomData) {
         try {
           console.log('💾 Tallennetaan keskustelu (fast close)...');
-          await saveConversationFromRoom(roomId, roomData, reason);
+          await saveConversationFromRoom(roomId, roomData);
           console.log('✅ Keskustelu tallennettu (fast close)');
         } catch (saveError) {
           console.error('❌ Virhe keskustelun tallennuksessa (fast close):', saveError);
@@ -1109,7 +1109,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
     };
   }, [roomId, user?.uid, fastCloseRoom]);
 
-  // Ilmoita käyttäjä (porrastettu bänni: 4 ilmoitusta = temp bänni, 3 temp bänniä = ikuinen)
+  // Ilmoita käyttäjä (yksinkertaistettu versio users-kokoelmalle)
   const reportUser = async () => {
     try {
       if (!otherUser?.uid) {
@@ -1119,17 +1119,17 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
 
       console.log("📋 Ilmoitetaan käyttäjä:", otherUser.uid);
       
-      // Hae nykyinen profiili
-      const profileRef = doc(db, 'profiles', otherUser.uid);
-      const profileSnap = await getDoc(profileRef);
+      // Hae käyttäjätiedot users-kokoelmasta
+      const userRef = doc(db, 'users', otherUser.uid);
+      const userSnap = await getDoc(userRef);
       
-      if (!profileSnap.exists()) {
-        console.warn("Käyttäjän profiilia ei löydy, ei voida ilmoittaa");
+      if (!userSnap.exists()) {
+        console.warn("Käyttäjätietoja ei löydy, ei voida ilmoittaa");
         return;
       }
       
-      const currentProfile = profileSnap.data();
-      const reportersList = currentProfile.reportersList || [];
+      const currentUser = userSnap.data();
+      const reportersList = currentUser.reportersList || [];
       
       // Tarkista onko tämä käyttäjä jo ilmoittanut
       if (reportersList.includes(user.uid)) {
@@ -1138,16 +1138,14 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         return;
       }
       
-      const banHistory = currentProfile.banHistory || [];
-      
-      // Tarkista onko jo ikuisesti bannattu
-      if (currentProfile.banned) {
-        console.log("Käyttäjä on jo bannattu ikuisesti");
+      // Tarkista onko jo bannattu
+      if (currentUser.bannedUntil) {
+        console.log("Käyttäjä on jo bannattu");
         setShowReportMenu(false);
         return;
       }
       
-      // Lisää tämä käyttäjä ilmoittajien listaan
+      // Lisää ilmoittaja listaan
       const newReportersList = [...reportersList, user.uid];
       const newReportCount = newReportersList.length;
       
@@ -1161,51 +1159,32 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       
       // Jos 4+ ilmoitusta, anna bänni
       if (newReportCount >= 4) {
-        const tempBanCount = banHistory.filter(ban => ban.type === 'temporary').length;
+        const tempBanCount = (currentUser.banCount || 0);
         
         if (tempBanCount >= 2) {
-          // Kolmas temp-bänni = ikuinen bänni
-          updateData.banned = true;
-          updateData.bannedAt = new Date();
-          updateData.bannedReason = `Ikuinen bänni: ${tempBanCount + 1} väliaikaista bänniä`;
-          updateData.banHistory = [...banHistory, {
-            type: 'permanent',
-            reason: `${newReportCount} ilmoitusta (kolmas temp-bänni)`,
-            createdAt: new Date(),
-            reportCount: newReportCount
-          }];
-          
+          // Ikuinen bänni
+          updateData.bannedUntil = 'permanent';
+          updateData.banReason = `Ikuinen bänni: ${newReportCount} ilmoitusta`;
+          updateData.banCount = tempBanCount + 1;
           shouldLeave = true;
         } else {
-          // Ensimmäinen tai toinen temp-bänni (24h)
+          // Määräaikainen bänni (24h)
           const tempBanEnd = new Date();
           tempBanEnd.setHours(tempBanEnd.getHours() + 24);
           
-          updateData.temporaryBan = {
-            active: true,
-            bannedAt: new Date(),
-            bannedUntil: tempBanEnd,
-            reason: `${newReportCount} ilmoitusta`
-          };
-          updateData.banHistory = [...banHistory, {
-            type: 'temporary',
-            reason: `${newReportCount} ilmoitusta`,
-            createdAt: new Date(),
-            expiresAt: tempBanEnd,
-            reportCount: newReportCount
-          }];
-          updateData.reportersList = []; // Nollaa ilmoittajat temp-bännin jälkeen
-          updateData.reports = 0; // Nollaa ilmoitukset temp-bännin jälkeen
-          
+          updateData.bannedUntil = tempBanEnd;
+          updateData.banReason = `${newReportCount} ilmoitusta`;
+          updateData.banCount = tempBanCount + 1;
+          updateData.reportersList = []; // Nollaa ilmoitukset
+          updateData.reports = 0;
           shouldLeave = true;
         }
       }
       
-      // Päivitä profiili
-      await updateDoc(profileRef, updateData);
+      // Päivitä käyttäjätiedot
+      await updateDoc(userRef, updateData);
       console.log(`✅ Käyttäjä ilmoitettu (${newReportCount}/4 ilmoitusta)`);
       
-      // Ei ilmoitusta käyttäjälle - hiljainen toiminto
       setShowReportMenu(false);
       
       if (shouldLeave) {
@@ -1213,7 +1192,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
         if (roomData) {
           try {
             console.log('💾 Tallennetaan keskustelu ilmoituksen vuoksi...');
-            await saveConversationFromRoom(roomId, roomData, 'user_reported');
+            await saveConversationFromRoom(roomId, roomData);
             console.log('✅ Keskustelu tallennettu ilmoitusta varten');
           } catch (saveError) {
             console.error('❌ Virhe keskustelun tallennuksessa (ilmoitus):', saveError);
@@ -1238,7 +1217,7 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       if (roomReady && roomData) {
         try {
           console.log('💾 Tallennetaan keskustelu ennen huoneen poistamista...');
-          await saveConversationFromRoom(roomId, roomData, 'chat_ended');
+          await saveConversationFromRoom(roomId, roomData);
           console.log('✅ Keskustelu tallennettu onnistuneesti');
         } catch (saveError) {
           console.error('❌ Virhe keskustelun tallennuksessa:', saveError);

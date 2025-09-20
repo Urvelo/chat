@@ -12,13 +12,13 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  // Tarkista onko profiili jo olemassa - Google-käyttäjille tallennetaan hyväksyntä
+  // Tarkista onko profiili jo olemassa - users-kokoelmassa
   useEffect(() => {
     const checkExistingProfile = async () => {
       try {
-        console.log("📋 Tarkistetaan profiilia käyttäjälle:", user?.displayName);
+        console.log("📋 Tarkistetaan käyttäjätietoja:", user?.displayName);
         
-        // Google-käyttäjille: tarkista onko hyväksynyt käyttöehdot aiemmin
+        // Google-käyttäjille: tarkista localStorage ensin
         if (user?.isGoogleUser) {
           const savedTermsAcceptance = localStorage.getItem(`google_terms_${user.uid}`);
           const savedAge = localStorage.getItem(`google_age_${user.uid}`);
@@ -26,28 +26,21 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
           if (savedTermsAcceptance === 'true' && savedAge) {
             console.log("✅ Google-käyttäjän tiedot löytyi - ohitetaan setup");
             
-            // Luo profiili suoraan tallennetuilla tiedoilla
-            const completedProfile = {
-              termsAccepted: true,
-              backgroundMusic: true,
-              age: parseInt(savedAge)
-            };
-            
-            // Tallenna profiili ja jatka
             const finalProfile = {
-              ...completedProfile,
               uid: user.uid,
               displayName: user.displayName,
               email: user.email,
               photoURL: user.photoURL,
+              age: parseInt(savedAge),
+              ageGroup: parseInt(savedAge) >= 18 ? '18+' : '15-17',
               createdAt: user.createdAt,
               isGoogleUser: true,
-              fingerprint: await getCachedFingerprint()
+              fingerprint: await getCachedFingerprint(),
+              termsAccepted: true,
+              backgroundMusic: true
             };
             
             console.log("💾 Käytetään tallennettuja Google tietoja:", finalProfile);
-            
-            // Jatka suoraan matchmakeriin
             onProfileComplete(finalProfile);
             return;
           } else {
@@ -55,11 +48,11 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
           }
         }
         
-        console.log("🆕 Näytetään profiilisetup");
+        console.log("🆕 Näytetään käyttäjätietojen setup");
 
       } catch (error) {
-        console.error('Virhe profiilin tarkistuksessa:', error);
-        setError('Profiilin lataus epäonnistui.');
+        console.error('Virhe käyttäjätietojen tarkistuksessa:', error);
+        setError('Käyttäjätietojen lataus epäonnistui.');
       } finally {
         setLoading(false);
       }
@@ -105,21 +98,31 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
         return '18+'; // Kaikki 18+ samaan ryhmään
       };
       
-      // Luo profiili
-      const profileData = {
+      // Luo käyttäjätiedot users-kokoelmaan
+      const userData = {
+        uid: user.uid,
         displayName: user.displayName,
-        age: parseInt(profile.age), // Käytä lomakkeesta syötettyä ikää
+        email: user.email,
+        photoURL: user.photoURL,
+        age: parseInt(profile.age),
         ageGroup: calculateAgeGroup(parseInt(profile.age)),
         backgroundMusic: profile.backgroundMusic,
         deviceFingerprint,
         createdAt: new Date().toISOString(),
-        isGoogleUser: user.isGoogleUser || false
+        isGoogleUser: user.isGoogleUser || false,
+        lastActive: new Date(),
+        termsAccepted: true,
+        // Banni-kentät valmiina
+        bannedUntil: null,
+        banReason: null,
+        banCount: 0,
+        violations: []
       };      
       
-      console.log("💾 Tallennettava profiilidata:", profileData);
+      console.log("💾 Tallennettava käyttäjädata users-kokoelmaan:", userData);
 
-      // Tallenna vain Firestoreen - EI localStorage:iin
-      await setDoc(doc(db, 'profiles', user.uid), profileData);
+      // Tallenna users-kokoelmaan
+      await setDoc(doc(db, 'users', user.uid), userData);
       
       // Google-käyttäjille: tallenna hyväksyntä ja ikä localStorage:iin tulevaa käyttöä varten
       if (user.isGoogleUser) {
@@ -134,8 +137,8 @@ const ProfileSetup = ({ user, onProfileComplete }) => {
       // Lähetä custom event jotta ChatRoom kuulee muutoksen
       window.dispatchEvent(new Event('musicSettingChanged'));
       
-      console.log("✅ Profiili tallennettu, kutsutaan onProfileComplete");
-      onProfileComplete(profileData);
+      console.log("✅ Käyttäjätiedot tallennettu users-kokoelmaan, kutsutaan onProfileComplete");
+      onProfileComplete(userData);
     } catch (error) {
       console.error('Virhe profiilin tallennuksessa:', error);
       setError('Profiilin tallennus epäonnistui. Yritä uudelleen.');

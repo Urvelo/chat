@@ -1,48 +1,37 @@
-// Automaattinen bannijärjestelmä
+// Yksinkertainen bannijärjestelmä - tallentaa vain users-kokoelmaan
 import { 
   db, 
   doc, 
   setDoc, 
   getDoc, 
-  collection, 
-  addDoc, 
-  query, 
-  where, 
-  getDocs, 
   updateDoc, 
   serverTimestamp 
 } from '../firebase';
 
-// Bannien herkkyysasetukset (säädettävät .env:n kautta)
+// Bannien herkkyysasetukset
 const getBanSettings = () => {
   const sensitivity = import.meta?.env?.VITE_BAN_SENSITIVITY || 'normal';
   
   switch (sensitivity) {
     case 'strict':
       return {
-        textViolationsForBan: 3,     // 3 tekstirikkomusta → banni
-        tempBanDuration: 48,         // 48h temp-banni
-        permBanAfter: 2              // 2. banni = ikuinen
+        textViolationsForBan: 3,
+        tempBanDuration: 48,
+        permBanAfter: 2
       };
     case 'relaxed':
       return {
-        textViolationsForBan: 10,    // 10 tekstirikkomusta → banni
-        tempBanDuration: 12,         // 12h temp-banni
-        permBanAfter: 5              // 5. banni = ikuinen
+        textViolationsForBan: 10,
+        tempBanDuration: 12,
+        permBanAfter: 5
       };
-    default: // 'normal'
+    default:
       return {
-        textViolationsForBan: 5,     // 5 tekstirikkomusta → banni
-        tempBanDuration: 24,         // 24h temp-banni
-        permBanAfter: 3              // 3. banni = ikuinen
+        textViolationsForBan: 5,
+        tempBanDuration: 24,
+        permBanAfter: 3
       };
   }
-};
-
-// Bannin kestot (millisekunteina)
-const BAN_DURATION = {
-  TEMPORARY: 24 * 60 * 60 * 1000, // 24 tuntia (päivitetään dynaamisesti)
-  PERMANENT: null // Ikuinen
 };
 
 // Banni-syyt
@@ -53,8 +42,7 @@ const BAN_REASONS = {
   PERMANENT: 'permanent_ban'
 };
 
-// Muunna käyttäjä-ID tallennuskelpoiseksi Google ID:ksi
-// Google-käyttäjille: google-xxx -> xxx (helpompi hallinta)
+// Muunna Google ID puhtaaksi
 const getUserDocId = (userId) => {
   if (userId && userId.startsWith('google-')) {
     return userId.replace('google-', '');
@@ -62,38 +50,40 @@ const getUserDocId = (userId) => {
   return userId;
 };
 
-// Tallenna käyttäjän rikkomus
+// Yksinkertainen rikkomuksen tallennus users-kokoelmaan
 export const recordViolation = async (userId, type, details = {}) => {
   try {
     const docId = getUserDocId(userId);
     
-    // Hae käyttäjän Gmail-osoite bännien hallintaa varten
-    let userEmail = null;
-    try {
-      const userRef = doc(db, 'profiles', userId);
-      const userSnap = await getDoc(userRef);
-      if (userSnap.exists()) {
-        userEmail = userSnap.data().email;
-      }
-    } catch (error) {
-      console.warn('⚠️ Ei voitu hakea käyttäjän sähköpostia:', error);
-    }
+    // Hae tai luo käyttäjän tiedot
+    const userRef = doc(db, 'users', docId);
+    const userSnap = await getDoc(userRef);
     
-    const violation = {
-      userId: docId, // Tallenna puhdas Google ID
-      originalUserId: userId, // Säilytä alkuperäinen referenssiksi  
-      userEmail, // Gmail helpottaa bännien hallintaa
-      type, // 'inappropriate_text' tai 'inappropriate_image'
+    let userData = {};
+    if (userSnap.exists()) {
+      userData = userSnap.data();
+    }
+
+    // Lisää rikkomus käyttäjän tietoihin
+    const violations = userData.violations || [];
+    violations.push({
+      type,
       details,
-      timestamp: serverTimestamp(),
-      processed: false
-    };
+      timestamp: new Date(),
+      originalUserId: userId
+    });
 
-    // Tallenna rikkomus violations-kokoelmaan
-    const violationRef = await addDoc(collection(db, 'violations'), violation);
-    console.log(`📋 Rikkomus tallennettu: ${type} - ${violationRef.id}`);
+    // Päivitä käyttäjätiedot
+    await setDoc(userRef, {
+      ...userData,
+      violations,
+      lastViolation: new Date(),
+      violationCount: violations.length
+    }, { merge: true });
 
-    return violationRef.id;
+    console.log(`📋 Rikkomus tallennettu users/${docId}: ${type}`);
+    return docId;
+    
   } catch (error) {
     console.error('❌ Virhe rikkomuksen tallennuksessa:', error);
     throw error;
@@ -103,17 +93,21 @@ export const recordViolation = async (userId, type, details = {}) => {
 // Hae käyttäjän viimeaikaiset tekstirikkeet (24h sisällä)
 export const getRecentTextViolations = async (userId) => {
   try {
+    const docId = getUserDocId(userId);
+    const userRef = doc(db, 'users', docId);
+    const userSnap = await getDoc(userRef);
+    
+    if (!userSnap.exists()) return 0;
+    
+    const userData = userSnap.data();
+    const violations = userData.violations || [];
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     
-    const q = query(
-      collection(db, 'violations'),
-      where('userId', '==', userId),
-      where('type', '==', BAN_REASONS.INAPPROPRIATE_TEXT),
-      where('timestamp', '>=', oneDayAgo)
-    );
-
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.length;
+    return violations.filter(v => 
+      v.type === BAN_REASONS.INAPPROPRIATE_TEXT && 
+      new Date(v.timestamp) > oneDayAgo
+    ).length;
+    
   } catch (error) {
     console.error('❌ Virhe tekstirikkeiden haussa:', error);
     return 0;
@@ -123,7 +117,8 @@ export const getRecentTextViolations = async (userId) => {
 // Tarkista onko käyttäjä bannattu
 export const isUserBanned = async (userId) => {
   try {
-    const userDoc = await getDoc(doc(db, 'users', userId));
+    const docId = getUserDocId(userId);
+    const userDoc = await getDoc(doc(db, 'users', docId));
     
     if (!userDoc.exists()) {
       return { banned: false };
@@ -132,7 +127,7 @@ export const isUserBanned = async (userId) => {
     const userData = userDoc.data();
     const bannedUntil = userData.bannedUntil;
 
-    // Jos ei bannia, ok
+    // Jos ei bannia
     if (!bannedUntil) {
       return { banned: false };
     }
@@ -142,7 +137,8 @@ export const isUserBanned = async (userId) => {
       return { 
         banned: true, 
         permanent: true,
-        reason: userData.banReason || 'Ikuinen banni'
+        reason: userData.banReason || 'Ikuinen banni',
+        email: userData.email
       };
     }
 
@@ -155,14 +151,15 @@ export const isUserBanned = async (userId) => {
         banned: true, 
         permanent: false,
         endsAt: new Date(banEndTime),
-        reason: userData.banReason || 'Määräaikainen banni'
+        reason: userData.banReason || 'Määräaikainen banni',
+        email: userData.email
       };
     } else {
-      // Banni on päättynyt, poista se (merge: true säilyttää muut kentät)
-      await setDoc(doc(db, 'users', userId), {
+      // Banni päättynyt, poista se
+      await updateDoc(doc(db, 'users', docId), {
         bannedUntil: null,
         banReason: null
-      }, { merge: true });
+      });
       return { banned: false };
     }
   } catch (error) {
@@ -171,66 +168,44 @@ export const isUserBanned = async (userId) => {
   }
 };
 
-// Bannaa käyttäjä
+// Yksinkertainen bannaus users-kokoelmaan
 export const banUser = async (userId, reason, permanent = false) => {
   try {
     const banSettings = getBanSettings();
-    const userDocRef = doc(db, 'users', userId);
-    const userDoc = await getDoc(userDocRef);
+    const docId = getUserDocId(userId);
+    const userRef = doc(db, 'users', docId);
+    const userSnap = await getDoc(userRef);
 
-    // Hae käyttäjän Gmail-osoite bännien hallintaa varten
-    let userEmail = null;
-    try {
-      const profileRef = doc(db, 'profiles', userId);
-      const profileSnap = await getDoc(profileRef);
-      if (profileSnap.exists()) {
-        userEmail = profileSnap.data().email;
-      }
-    } catch (error) {
-      console.warn('⚠️ Ei voitu hakea käyttäjän sähköpostia:', error);
+    let userData = {};
+    if (userSnap.exists()) {
+      userData = userSnap.data();
     }
-
-    let banData = {
-      banReason: reason,
-      lastBanDate: serverTimestamp(),
-      userEmail // Gmail helpottaa bännien hallintaa
-    };
 
     // Laske bannien määrä
-    let banCount = 1;
-    if (userDoc.exists()) {
-      const userData = userDoc.data();
-      banCount = (userData.banCount || 0) + 1;
-    }
+    let banCount = (userData.banCount || 0) + 1;
 
-    banData.banCount = banCount;
+    const banData = {
+      ...userData,
+      banCount,
+      banReason: reason,
+      lastBanDate: new Date(),
+      bannedUntil: null
+    };
 
-    // Jos ylitetään ikuisen bannin kynnys tai pyydetty ikuinen banni
+    // Määritä bannin tyyppi
     if (banCount >= banSettings.permBanAfter || permanent) {
       banData.bannedUntil = 'permanent';
       banData.banReason = `Ikuinen banni (${banCount}. rikkomus)`;
-      console.log(`🚫 IKUINEN BANNI: Käyttäjä ${userId} (${banCount}. rikkomus, kynnys: ${banSettings.permBanAfter})`);
+      console.log(`🚫 IKUINEN BANNI: ${docId} (${banCount}. rikkomus)`);
     } else {
-      // Määräaikainen banni (säädettävä kesto)
-      const banDuration = banSettings.tempBanDuration * 60 * 60 * 1000; // tunteja millisekunteihin
+      const banDuration = banSettings.tempBanDuration * 60 * 60 * 1000;
       const banEndTime = new Date(Date.now() + banDuration);
       banData.bannedUntil = banEndTime;
-      console.log(`⏰ ${banSettings.tempBanDuration}H BANNI: Käyttäjä ${userId} (${banCount}. rikkomus), päättyy ${banEndTime.toLocaleString()}`);
+      console.log(`⏰ ${banSettings.tempBanDuration}H BANNI: ${docId}, päättyy ${banEndTime.toLocaleString()}`);
     }
 
-    // Päivitä/luo käyttäjän tiedot (merge: true säilyttää olemassa olevat kentät)
-    await setDoc(userDocRef, banData, { merge: true });
-
-    // Tallenna banni-logi
-    await addDoc(collection(db, 'ban_logs'), {
-      userId,
-      userEmail, // Gmail helpottaa bännien hallintaa
-      reason,
-      banCount,
-      permanent: banData.bannedUntil === 'permanent',
-      bannedUntil: banData.bannedUntil,
-      timestamp: serverTimestamp()
-    });
+    // Tallenna users-kokoelmaan
+    await setDoc(userRef, banData);
 
     return {
       banned: true,
@@ -245,40 +220,30 @@ export const banUser = async (userId, reason, permanent = false) => {
   }
 };
 
-// Pääfunktio: käsittele sopimaton sisältö
+// Yksinkertainen sopimattoman sisällön käsittely
 export const handleInappropriateContent = async (userId, type, roomId, details = {}) => {
   try {
-    console.log(`🚨 Sopimaton sisältö havaittu: ${type} - Käyttäjä: ${userId}`);
+    console.log(`🚨 Sopimaton sisältö: ${type} - Käyttäjä: ${userId}`);
 
-    // 1. Tallenna rikkomus
+    // Tallenna rikkomus users-kokoelmaan
     await recordViolation(userId, type, details);
 
-    // 2. Käsittele banni-logiikka
     if (type === BAN_REASONS.INAPPROPRIATE_IMAGE) {
-      // Kuva: välitön 24h banni
+      // Kuva: välitön banni
       const banResult = await banUser(userId, 'Sopimaton kuva', false);
-      
-      // EI lähetetä viestiä chatiin - bannattu käyttäjä saa oman sivun
-      
       return { banned: true, banResult };
 
     } else if (type === BAN_REASONS.INAPPROPRIATE_TEXT) {
-      // Teksti: tarkista säädettävä kynnys
+      // Teksti: tarkista kynnys
       const banSettings = getBanSettings();
       const violationCount = await getRecentTextViolations(userId);
       
-      console.log(`📊 Tekstirikkeet: ${violationCount}/${banSettings.textViolationsForBan} (herkkyys: ${import.meta?.env?.VITE_BAN_SENSITIVITY || 'normal'})`);
+      console.log(`📊 Tekstirikkeet: ${violationCount}/${banSettings.textViolationsForBan}`);
       
       if (violationCount >= banSettings.textViolationsForBan) {
-        // Kynnys ylitetty → banni
-        const banResult = await banUser(userId, `${banSettings.textViolationsForBan} sopimatonta viestiä 24h sisällä`, false);
-        
-        // EI lähetetä viestiä chatiin - bannattu käyttäjä saa oman sivun
-        
+        const banResult = await banUser(userId, `${banSettings.textViolationsForBan} sopimatonta viestiä`, false);
         return { banned: true, banResult };
       } else {
-        // Alle kynnyksen → EI varoitusta chatissa
-        
         return { banned: false, violationCount };
       }
     }
@@ -289,4 +254,4 @@ export const handleInappropriateContent = async (userId, type, roomId, details =
   }
 };
 
-export { BAN_REASONS, BAN_DURATION };
+export { BAN_REASONS };
