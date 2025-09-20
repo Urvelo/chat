@@ -53,11 +53,23 @@ const BAN_REASONS = {
   PERMANENT: 'permanent_ban'
 };
 
+// Muunna käyttäjä-ID tallennuskelpoiseksi Google ID:ksi
+// Google-käyttäjille: google-xxx -> xxx (helpompi hallinta)
+const getUserDocId = (userId) => {
+  if (userId && userId.startsWith('google-')) {
+    return userId.replace('google-', '');
+  }
+  return userId;
+};
+
 // Tallenna käyttäjän rikkomus
 export const recordViolation = async (userId, type, details = {}) => {
   try {
+    const docId = getUserDocId(userId);
+    
     const violation = {
-      userId,
+      userId: docId, // Tallenna puhdas Google ID
+      originalUserId: userId, // Säilytä alkuperäinen referenssiksi  
       type, // 'inappropriate_text' tai 'inappropriate_image'
       details,
       timestamp: serverTimestamp(),
