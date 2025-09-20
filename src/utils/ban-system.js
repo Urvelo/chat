@@ -133,11 +133,11 @@ export const isUserBanned = async (userId) => {
         reason: userData.banReason || 'Määräaikainen banni'
       };
     } else {
-      // Banni on päättynyt, poista se
-      await updateDoc(doc(db, 'users', userId), {
+      // Banni on päättynyt, poista se (merge: true säilyttää muut kentät)
+      await setDoc(doc(db, 'users', userId), {
         bannedUntil: null,
         banReason: null
-      });
+      }, { merge: true });
       return { banned: false };
     }
   } catch (error) {
@@ -180,8 +180,8 @@ export const banUser = async (userId, reason, permanent = false) => {
       console.log(`⏰ ${banSettings.tempBanDuration}H BANNI: Käyttäjä ${userId} (${banCount}. rikkomus), päättyy ${banEndTime.toLocaleString()}`);
     }
 
-    // Päivitä käyttäjän tiedot
-    await updateDoc(userDocRef, banData);
+    // Päivitä/luo käyttäjän tiedot (merge: true säilyttää olemassa olevat kentät)
+    await setDoc(userDocRef, banData, { merge: true });
 
     // Tallenna banni-logi
     await addDoc(collection(db, 'ban_logs'), {
