@@ -481,8 +481,10 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
       console.log('🔍 Kaikki kategoriat:', categories);
       console.log('🔍 Kaikki scoret:', scores);
 
-      // Säännöt (säädettävät .env:n kautta)
-      const moderationLevel = import.meta.env.VITE_MODERATION_LEVEL || 'normal';
+      // Säännöt (säädettävät .env:n kautta, fallback strict production)
+      const moderationLevel = import.meta.env.VITE_MODERATION_LEVEL || 'strict'; // Default strict production
+      
+      console.log(`🎛️ Moderation level: ${moderationLevel}`);
       
       let THRESHOLDS;
       switch (moderationLevel) {
@@ -514,7 +516,13 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
           };
       }
       
-      console.log(`🎛️ Moderation level: ${moderationLevel}`, THRESHOLDS);
+      console.log(`🎛️ Moderation level: ${moderationLevel}`);
+      console.log('🔧 Thresholds:', {
+        sexual: THRESHOLDS.sexual * 100 + '%',
+        violence: THRESHOLDS.violence * 100 + '%',
+        'violence/graphic': THRESHOLDS['violence/graphic'] * 100 + '%',
+        harassment: THRESHOLDS.harassment * 100 + '%'
+      });
 
       // 🧪 DEBUG MODE: Aseta ympäristömuuttuja VITE_DEBUG_MODERATION=true testaamista varten
       const isDebugMode = import.meta.env.VITE_DEBUG_MODERATION === 'true';
@@ -544,10 +552,34 @@ const ChatRoom = ({ user, profile, roomId, roomData, onLeaveRoom }) => {
 
       // 2) Arvioi muut kategoriat lievemmillä rajoilla
       const blocked = [];
-      if ((scores['sexual'] || 0) > THRESHOLDS['sexual']) blocked.push('sexual');
-      if ((scores['violence'] || 0) > THRESHOLDS['violence']) blocked.push('violence');
-      if ((scores['violence/graphic'] || 0) > THRESHOLDS['violence/graphic']) blocked.push('violence/graphic');
-      if ((scores['harassment'] || 0) > THRESHOLDS['harassment']) blocked.push('harassment');
+      console.log('🔍 Checking scores against thresholds:');
+      
+      const sexualScore = (scores['sexual'] || 0) * 100;
+      const violenceScore = (scores['violence'] || 0) * 100;
+      const violenceGraphicScore = (scores['violence/graphic'] || 0) * 100;
+      const harassmentScore = (scores['harassment'] || 0) * 100;
+      
+      console.log(`  - sexual: ${sexualScore.toFixed(2)}% (threshold: ${THRESHOLDS['sexual'] * 100}%)`);
+      console.log(`  - violence: ${violenceScore.toFixed(2)}% (threshold: ${THRESHOLDS['violence'] * 100}%)`);
+      console.log(`  - violence/graphic: ${violenceGraphicScore.toFixed(2)}% (threshold: ${THRESHOLDS['violence/graphic'] * 100}%)`);
+      console.log(`  - harassment: ${harassmentScore.toFixed(2)}% (threshold: ${THRESHOLDS['harassment'] * 100}%)`);
+      
+      if ((scores['sexual'] || 0) > THRESHOLDS['sexual']) {
+        blocked.push('sexual');
+        console.log(`🚫 BLOCKED: sexual (${sexualScore.toFixed(2)}% > ${THRESHOLDS['sexual'] * 100}%)`);
+      }
+      if ((scores['violence'] || 0) > THRESHOLDS['violence']) {
+        blocked.push('violence');
+        console.log(`🚫 BLOCKED: violence (${violenceScore.toFixed(2)}% > ${THRESHOLDS['violence'] * 100}%)`);
+      }
+      if ((scores['violence/graphic'] || 0) > THRESHOLDS['violence/graphic']) {
+        blocked.push('violence/graphic');
+        console.log(`🚫 BLOCKED: violence/graphic (${violenceGraphicScore.toFixed(2)}% > ${THRESHOLDS['violence/graphic'] * 100}%)`);
+      }
+      if ((scores['harassment'] || 0) > THRESHOLDS['harassment']) {
+        blocked.push('harassment');
+        console.log(`🚫 BLOCKED: harassment (${harassmentScore.toFixed(2)}% > ${THRESHOLDS['harassment'] * 100}%)`);
+      }
 
       // 3) Jos OpenAI flaggaa mutta pisteet ovat selvästi alle rajojen, sallitaan (paitsi minors)
       if (blocked.length === 0) {
